@@ -1,4 +1,4 @@
-const { poolPromise } = require('../config/db');
+const { poolPromise, sql } = require('../config/db');
 
 const obtenerPeriodos = async () => {
     const pool = await poolPromise;
@@ -42,7 +42,7 @@ const obtenerPeriodoPorId = async (id) => {
 
     const result = await pool
         .request()
-        .input('id', id)
+        .input('id', sql.Int, id)
         .query(query);
 
     return result.recordset[0] || null;

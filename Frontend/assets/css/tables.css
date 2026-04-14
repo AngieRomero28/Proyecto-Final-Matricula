@@ -1,0 +1,35 @@
+.table-wrap {
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+thead th {
+    background: var(--gray-100);
+    padding: 12px 14px;
+    text-align: left;
+    color: var(--gray-600);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+tbody tr {
+    border-bottom: 1px solid var(--gray-200);
+    transition: 0.15s ease;
+}
+
+tbody tr:hover {
+    background: var(--gray-100);
+}
+
+tbody td {
+    padding: 13px 14px;
+    color: var(--gray-800);
+}

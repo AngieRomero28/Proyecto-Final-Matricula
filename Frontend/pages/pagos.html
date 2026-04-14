@@ -1,0 +1,61 @@
+<div class="page-header">
+    <div>
+        <h1>Pagos</h1>
+        <p>Gestión de pagos y estados de cuenta</p>
+    </div>
+</div>
+
+<div id="pagos-message"></div>
+
+<div class="matricula-layout">
+    <div class="matricula-col">
+        <div class="card">
+            <div class="card-header">
+                <h3>Seleccionar Estudiante</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="select-estudiante-pago">Estudiante</label>
+                    <select id="select-estudiante-pago"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Facturas Pendientes</h3>
+            </div>
+            <div class="card-body">
+                <div id="lista-facturas" class="curso-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="matricula-col">
+        <div class="card">
+            <div class="card-header">
+                <h3>Registrar Pago</h3>
+            </div>
+            <div class="card-body">
+                <div id="detalle-pago"></div>
+
+                <div class="form-group">
+                    <label for="monto-pago">Monto a pagar</label>
+                    <input type="number" id="monto-pago">
+                </div>
+
+                <div class="form-group">
+                    <label for="metodo-pago">Método de pago</label>
+                    <select id="metodo-pago">
+                        <option value="Tarjeta">Tarjeta</option>
+                        <option value="SINPE">SINPE</option>
+                    </select>
+                </div>
+
+                <button class="btn btn-primary btn-block" id="btn-pagar">
+                    Realizar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

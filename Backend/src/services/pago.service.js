@@ -1,4 +1,6 @@
 const { poolPromise, sql } = require('../config/db');
+const { generarComprobanteMatricula } = require('../utils/helpers');
+const { registrarAuditoria } = require('./auditoria.service');
 
 const crearErrorValidacion = (mensaje, statusCode = 400) => {
     const error = new Error(mensaje);
@@ -61,7 +63,7 @@ const obtenerPagos = async () => {
             ON f.FacturaID = ec.FacturaID
         LEFT JOIN Matricula m
             ON f.FacturaID = m.FacturaID
-        ORDER BY p.PagoID;
+        ORDER BY p.PagoID DESC;
     `;
 
     const result = await pool.request().query(query);
@@ -123,8 +125,7 @@ const obtenerPagoPorId = async (id) => {
             ON f.FacturaID = ec.FacturaID
         LEFT JOIN Matricula m
             ON f.FacturaID = m.FacturaID
-        WHERE p.PagoID = @id
-        ORDER BY p.PagoID;
+        WHERE p.PagoID = @id;
     `;
 
     const result = await pool
@@ -145,16 +146,23 @@ const registrarPago = async (data) => {
         referenciaPago
     } = data;
 
-    if (!facturaId || !estudianteId || !periodoId || montoPago === undefined || montoPago === null || !metodoPago) {
+    if (
+        !facturaId ||
+        !estudianteId ||
+        !periodoId ||
+        montoPago === undefined ||
+        montoPago === null ||
+        !metodoPago
+    ) {
         throw crearErrorValidacion(
             'Debe enviar facturaId, estudianteId, periodoId, montoPago y metodoPago'
         );
     }
 
     if (
-        isNaN(Number(facturaId)) ||
-        isNaN(Number(estudianteId)) ||
-        isNaN(Number(periodoId))
+        Number.isNaN(Number(facturaId)) ||
+        Number.isNaN(Number(estudianteId)) ||
+        Number.isNaN(Number(periodoId))
     ) {
         throw crearErrorValidacion('facturaId, estudianteId y periodoId deben ser numéricos');
     }
@@ -166,7 +174,7 @@ const registrarPago = async (data) => {
     const metodoPagoTexto = String(metodoPago).trim();
     const referenciaPagoTexto = referenciaPago ? String(referenciaPago).trim() : null;
 
-    if (isNaN(monto) || monto <= 0) {
+    if (Number.isNaN(monto) || monto <= 0) {
         throw crearErrorValidacion('El montoPago debe ser un número mayor que 0');
     }
 
@@ -176,11 +184,12 @@ const registrarPago = async (data) => {
 
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
+    let transactionIniciada = false;
 
     try {
         await transaction.begin();
+        transactionIniciada = true;
 
-        // Validar estudiante
         const estudianteResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .query(`
@@ -193,7 +202,6 @@ const registrarPago = async (data) => {
             throw crearErrorValidacion('El estudiante no existe', 404);
         }
 
-        // Validar periodo
         const periodoResult = await new sql.Request(transaction)
             .input('periodoId', sql.Int, periodoIdNum)
             .query(`
@@ -206,7 +214,6 @@ const registrarPago = async (data) => {
             throw crearErrorValidacion('El periodo no existe', 404);
         }
 
-        // Validar factura y que pertenezca al estudiante/periodo correcto
         const facturaResult = await new sql.Request(transaction)
             .input('facturaId', sql.Int, facturaIdNum)
             .input('estudianteId', sql.Int, estudianteIdNum)
@@ -225,7 +232,7 @@ const registrarPago = async (data) => {
                     m.MatriculaID,
                     m.EstadoMatricula,
                     m.ComprobanteMatricula
-                FROM Factura f
+                FROM Factura f WITH (UPDLOCK, ROWLOCK)
                 LEFT JOIN Estado_Cuenta ec
                     ON f.FacturaID = ec.FacturaID
                 LEFT JOIN Matricula m
@@ -249,21 +256,28 @@ const registrarPago = async (data) => {
 
         const factura = facturaResult.recordset[0];
 
+        if (!factura.EstadoCuentaID) {
+            throw crearErrorValidacion('La factura no tiene un estado de cuenta asociado');
+        }
+
         if (factura.EstadoFactura === 'Pagada') {
             throw crearErrorValidacion('La factura ya se encuentra pagada');
         }
 
-        if (factura.SaldoPendiente !== null && Number(factura.SaldoPendiente) <= 0) {
+        if (factura.SaldoPendiente === null || factura.SaldoPendiente === undefined) {
+            throw crearErrorValidacion('No se pudo determinar el saldo pendiente de la factura');
+        }
+
+        if (Number(factura.SaldoPendiente) <= 0) {
             throw crearErrorValidacion('La factura no tiene saldo pendiente');
         }
 
-        if (factura.SaldoPendiente !== null && monto > Number(factura.SaldoPendiente)) {
+        if (monto > Number(factura.SaldoPendiente)) {
             throw crearErrorValidacion(
                 `El monto del pago excede el saldo pendiente actual (${Number(factura.SaldoPendiente).toFixed(2)})`
             );
         }
 
-        // Insertar pago
         const insertPagoResult = await new sql.Request(transaction)
             .input('facturaId', sql.Int, facturaIdNum)
             .input('estudianteId', sql.Int, estudianteIdNum)
@@ -305,7 +319,6 @@ const registrarPago = async (data) => {
             throw new Error('No se pudo obtener el ID del pago registrado');
         }
 
-        // Releer estado actualizado por trigger
         const estadoActualizadoResult = await new sql.Request(transaction)
             .input('facturaId', sql.Int, facturaIdNum)
             .query(`
@@ -333,16 +346,18 @@ const registrarPago = async (data) => {
 
         const estadoActualizado = estadoActualizadoResult.recordset[0];
 
-        // Si quedó totalmente pagada, confirmar matrícula
+        if (!estadoActualizado) {
+            throw new Error('No se pudo obtener el estado actualizado de la factura');
+        }
+
         if (
-            estadoActualizado &&
             estadoActualizado.MatriculaID &&
             Number(estadoActualizado.SaldoPendiente) === 0 &&
             estadoActualizado.EstadoFactura === 'Pagada'
         ) {
             const comprobanteMatricula =
                 estadoActualizado.ComprobanteMatricula ||
-                `COMP-${estadoActualizado.MatriculaID}-${estadoActualizado.Anio || new Date().getFullYear()}`;
+                generarComprobanteMatricula(estadoActualizado.MatriculaID);
 
             await new sql.Request(transaction)
                 .input('matriculaId', sql.Int, estadoActualizado.MatriculaID)
@@ -355,7 +370,15 @@ const registrarPago = async (data) => {
                 `);
         }
 
+        await registrarAuditoria({
+            usuario: `Estudiante ${estudianteIdNum}`,
+            accion: 'REGISTRAR_PAGO',
+            descripcion: `Se registró el pago ${pagoId} para la factura ${facturaIdNum} del periodo ${periodoIdNum} por un monto de ${monto.toFixed(2)} mediante ${metodoPagoTexto}.`,
+            transaction
+        });
+
         await transaction.commit();
+        transactionIniciada = false;
 
         const pagoRegistrado = await obtenerPagoPorId(pagoId);
 
@@ -370,7 +393,7 @@ const registrarPago = async (data) => {
             estadoPago: 'Exitoso'
         };
     } catch (error) {
-        if (transaction._aborted !== true) {
+        if (transactionIniciada) {
             await transaction.rollback();
         }
         throw error;

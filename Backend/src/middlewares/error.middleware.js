@@ -7,12 +7,20 @@ const errorMiddleware = (err, req, res, next) => {
         fecha: new Date().toISOString()
     });
 
-    const statusCode = err.statusCode || 500;
+    const statusCode =
+        Number.isInteger(err.statusCode) && err.statusCode >= 400 && err.statusCode < 600
+            ? err.statusCode
+            : 500;
 
-    res.status(statusCode).json({
-        mensaje: err.message || 'Error interno del servidor',
-        error: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
+    const respuesta = {
+        mensaje: err.message || 'Error interno del servidor'
+    };
+
+    if (process.env.NODE_ENV === 'development') {
+        respuesta.error = err.stack;
+    }
+
+    res.status(statusCode).json(respuesta);
 };
 
 module.exports = errorMiddleware;

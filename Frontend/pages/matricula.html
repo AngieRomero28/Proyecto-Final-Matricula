@@ -1,0 +1,62 @@
+<div class="page-header">
+    <div>
+        <h1>Proceso de Matrícula</h1>
+        <p>Inscripción de cursos por estudiante</p>
+    </div>
+</div>
+
+<div id="matricula-message"></div>
+
+<div class="matricula-layout">
+    <div class="matricula-col">
+        <div class="card">
+            <div class="card-header">
+                <h3>Seleccionar Estudiante</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="select-estudiante">Estudiante</label>
+                    <select id="select-estudiante"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Seleccionar Período</h3>
+            </div>
+            <div class="card-body">
+                <div class="form-group">
+                    <label for="select-periodo">Período</label>
+                    <select id="select-periodo"></select>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <h3>Secciones Disponibles</h3>
+            </div>
+            <div class="card-body">
+                <div id="lista-secciones" class="curso-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="matricula-col">
+        <div class="card">
+            <div class="card-header">
+                <h3>Resumen de Matrícula</h3>
+            </div>
+            <div class="card-body">
+                <div id="resumen-matricula"></div>
+
+                <div class="mt-2">
+                    <button class="btn btn-primary btn-block" id="btn-confirmar-matricula">
+                        Confirmar Matrícula
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

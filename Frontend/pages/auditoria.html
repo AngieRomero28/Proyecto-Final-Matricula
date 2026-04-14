@@ -1,0 +1,58 @@
+<div class="page-header">
+    <div>
+        <h1>Auditoría del Sistema</h1>
+        <p>Bitácora de acciones registradas en el sistema</p>
+    </div>
+</div>
+
+<div id="auditoria-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+
+    <div class="card-body">
+        <div class="form-group">
+            <label for="filtro-usuario">Usuario</label>
+            <input type="text" id="filtro-usuario" class="form-control" placeholder="Filtrar por usuario">
+        </div>
+
+        <div class="form-group">
+            <label for="filtro-accion">Acción</label>
+            <input type="text" id="filtro-accion" class="form-control" placeholder="Filtrar por acción">
+        </div>
+
+        <div class="form-group">
+            <label for="filtro-fecha">Fecha</label>
+            <input type="date" id="filtro-fecha" class="form-control">
+        </div>
+
+        <button class="btn btn-primary" id="btn-filtrar-auditoria">Filtrar</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Registros de Auditoría</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-auditoria">
+                <tr>
+                    <td colspan="5">Cargando registros...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

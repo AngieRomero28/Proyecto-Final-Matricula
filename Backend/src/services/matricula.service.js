@@ -1,4 +1,5 @@
 const { poolPromise, sql } = require('../config/db');
+const { registrarAuditoria } = require('./auditoria.service');
 
 const crearErrorValidacion = (mensaje, statusCode = 400) => {
     const error = new Error(mensaje);
@@ -69,7 +70,7 @@ const obtenerMatriculas = async () => {
             ON m.FacturaID = f.FacturaID
         LEFT JOIN Estado_Cuenta ec
             ON m.EstadoCuentaID = ec.EstadoCuentaID
-        ORDER BY m.MatriculaID;
+        ORDER BY m.MatriculaID DESC;
     `;
 
     const result = await pool.request().query(query);
@@ -164,13 +165,14 @@ const crearMatricula = async (data) => {
 
     const estudianteIdNum = Number(estudianteId);
     const periodoIdNum = Number(periodoId);
-    const seccionesUnicas = [...new Set(secciones.map(Number))];
+    const seccionesNormalizadas = secciones.map(Number);
+    const seccionesUnicas = [...new Set(seccionesNormalizadas)];
 
-    if (isNaN(estudianteIdNum) || isNaN(periodoIdNum)) {
+    if (Number.isNaN(estudianteIdNum) || Number.isNaN(periodoIdNum)) {
         throw crearErrorValidacion('estudianteId y periodoId deben ser numéricos');
     }
 
-    if (seccionesUnicas.some(isNaN)) {
+    if (seccionesNormalizadas.some((sec) => Number.isNaN(sec))) {
         throw crearErrorValidacion('Todas las secciones deben ser numéricas');
     }
 
@@ -180,11 +182,12 @@ const crearMatricula = async (data) => {
 
     const pool = await poolPromise;
     const transaction = new sql.Transaction(pool);
+    let transactionIniciada = false;
 
     try {
         await transaction.begin();
+        transactionIniciada = true;
 
-        // Validar estudiante
         const estudianteResult = await new sql.Request(transaction)
             .input('id', sql.Int, estudianteIdNum)
             .query(`
@@ -197,11 +200,17 @@ const crearMatricula = async (data) => {
             throw crearErrorValidacion('El estudiante no existe', 404);
         }
 
-        // Validar periodo
         const periodoResult = await new sql.Request(transaction)
             .input('id', sql.Int, periodoIdNum)
             .query(`
-                SELECT PeriodoID, NombrePeriodo, TipoPeriodo, Anio, EstadoPeriodo
+                SELECT
+                    PeriodoID,
+                    NombrePeriodo,
+                    TipoPeriodo,
+                    Anio,
+                    EstadoPeriodo,
+                    FechaInicioMatricula,
+                    FechaFinMatricula
                 FROM Periodo
                 WHERE PeriodoID = @id
             `);
@@ -212,7 +221,16 @@ const crearMatricula = async (data) => {
 
         const periodo = periodoResult.recordset[0];
 
-        // Validar bloqueo financiero o académico
+        if (periodo.FechaInicioMatricula && periodo.FechaFinMatricula) {
+            const ahora = new Date();
+            const fechaInicioMatricula = new Date(periodo.FechaInicioMatricula);
+            const fechaFinMatricula = new Date(periodo.FechaFinMatricula);
+
+            if (ahora < fechaInicioMatricula || ahora > fechaFinMatricula) {
+                throw crearErrorValidacion('La matrícula no está habilitada para este periodo');
+            }
+        }
+
         const bloqueoResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .query(`
@@ -225,11 +243,10 @@ const crearMatricula = async (data) => {
         if (bloqueoResult.recordset.length > 0) {
             const bloqueo = bloqueoResult.recordset[0];
             throw crearErrorValidacion(
-                `El estudiante tiene un bloqueo ${bloqueo.TipoBloqueo.toLowerCase()} activo: ${bloqueo.Motivo}`
+                `El estudiante tiene un bloqueo ${String(bloqueo.TipoBloqueo).toLowerCase()} activo: ${bloqueo.Motivo}`
             );
         }
 
-        // Validar restricción financiera activa
         const restriccionResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .query(`
@@ -248,7 +265,6 @@ const crearMatricula = async (data) => {
         const cursosNuevos = [];
         const horariosNuevos = [];
 
-        // Validar secciones, cupo, periodo y recolectar cursos/horarios
         for (const secId of seccionesUnicas) {
             const seccionResult = await new sql.Request(transaction)
                 .input('id', sql.Int, secId)
@@ -263,7 +279,7 @@ const crearMatricula = async (data) => {
                         c.CodigoCurso,
                         c.NombreCurso,
                         c.Creditos
-                    FROM Seccion s
+                    FROM Seccion s WITH (UPDLOCK, ROWLOCK)
                     INNER JOIN Curso c
                         ON s.CursoID = c.CursoID
                     WHERE s.SeccionID = @id
@@ -275,22 +291,26 @@ const crearMatricula = async (data) => {
 
             const seccion = seccionResult.recordset[0];
 
-            if (seccion.PeriodoID !== periodoIdNum) {
+            if (Number(seccion.PeriodoID) !== periodoIdNum) {
                 throw crearErrorValidacion(`La sección ${secId} no pertenece al periodo indicado`);
             }
 
-            if (seccion.CupoDisponible <= 0) {
+            if (seccion.EstadoSeccion && seccion.EstadoSeccion !== 'Activa') {
+                throw crearErrorValidacion(`La sección ${secId} no se encuentra activa`);
+            }
+
+            if (Number(seccion.CupoDisponible) <= 0) {
                 throw crearErrorValidacion(`La sección ${secId} no tiene cupo disponible`);
             }
 
-            creditosTotalesNuevos += Number(seccion.Creditos);
+            creditosTotalesNuevos += Number(seccion.Creditos || 0);
 
             cursosNuevos.push({
                 SeccionID: seccion.SeccionID,
                 CursoID: seccion.CursoID,
                 CodigoCurso: seccion.CodigoCurso,
                 NombreCurso: seccion.NombreCurso,
-                Creditos: seccion.Creditos
+                Creditos: Number(seccion.Creditos || 0)
             });
 
             const horariosResult = await new sql.Request(transaction)
@@ -313,7 +333,6 @@ const crearMatricula = async (data) => {
             }
         }
 
-        // Validar choque entre las secciones nuevas
         for (let i = 0; i < horariosNuevos.length; i++) {
             for (let j = i + 1; j < horariosNuevos.length; j++) {
                 const a = horariosNuevos[i];
@@ -327,7 +346,6 @@ const crearMatricula = async (data) => {
             }
         }
 
-        // Obtener secciones ya matriculadas del estudiante en el mismo periodo
         const seccionesActualesResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .input('periodoId', sql.Int, periodoIdNum)
@@ -352,10 +370,9 @@ const crearMatricula = async (data) => {
 
         const cursosActuales = seccionesActualesResult.recordset;
 
-        // Validar que no duplique cursos en el mismo periodo
         for (const cursoNuevo of cursosNuevos) {
             const yaMatriculado = cursosActuales.find(
-                cursoActual => cursoActual.CursoID === cursoNuevo.CursoID
+                (cursoActual) => Number(cursoActual.CursoID) === Number(cursoNuevo.CursoID)
             );
 
             if (yaMatriculado) {
@@ -365,7 +382,6 @@ const crearMatricula = async (data) => {
             }
         }
 
-        // Obtener horarios actuales del estudiante en el mismo periodo
         const horariosActualesResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .input('periodoId', sql.Int, periodoIdNum)
@@ -393,7 +409,6 @@ const crearMatricula = async (data) => {
 
         const horariosActuales = horariosActualesResult.recordset;
 
-        // Validar choque con horarios ya matriculados
         for (const horarioNuevo of horariosNuevos) {
             for (const horarioActual of horariosActuales) {
                 if (hayChoque(horarioNuevo, horarioActual)) {
@@ -404,7 +419,6 @@ const crearMatricula = async (data) => {
             }
         }
 
-        // Validar prerrequisitos
         for (const cursoNuevo of cursosNuevos) {
             const prerrequisitosResult = await new sql.Request(transaction)
                 .input('cursoId', sql.Int, cursoNuevo.CursoID)
@@ -424,9 +438,7 @@ const crearMatricula = async (data) => {
                     WHERE pr.CursoID = @cursoId
                 `);
 
-            const prerrequisitos = prerrequisitosResult.recordset;
-
-            for (const prer of prerrequisitos) {
+            for (const prer of prerrequisitosResult.recordset) {
                 if (!prer.EstadoCurso) {
                     throw crearErrorValidacion(
                         `El estudiante no cumple el prerrequisito ${prer.NombrePrerrequisito} para el curso ${cursoNuevo.NombreCurso}`
@@ -435,7 +447,6 @@ const crearMatricula = async (data) => {
             }
         }
 
-        // Validar límite de créditos
         const limiteResult = await new sql.Request(transaction)
             .input('periodoId', sql.Int, periodoIdNum)
             .query(`
@@ -461,14 +472,16 @@ const crearMatricula = async (data) => {
             const creditosActuales = Number(creditosActualesResult.recordset[0].CreditosActuales);
             const totalConNuevos = creditosActuales + creditosTotalesNuevos;
 
-            if (totalConNuevos > Number(limite.CreditosMaximos)) {
+            if (
+                limite.CreditosMaximos !== null &&
+                totalConNuevos > Number(limite.CreditosMaximos)
+            ) {
                 throw crearErrorValidacion(
                     `El estudiante supera el límite de créditos del periodo. Máximo permitido: ${limite.CreditosMaximos}`
                 );
             }
         }
 
-        // Calcular costo total
         const costoResult = await new sql.Request(transaction)
             .input('periodoId', sql.Int, periodoIdNum)
             .query(`
@@ -486,7 +499,6 @@ const crearMatricula = async (data) => {
         const costoMatriculaBase = Number(costo.CostoMatriculaBase);
         const costoTotal = (costoCredito * creditosTotalesNuevos) + costoMatriculaBase;
 
-        // Crear matrícula primero
         const insertMatriculaResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .input('periodoId', sql.Int, periodoIdNum)
@@ -522,7 +534,6 @@ const crearMatricula = async (data) => {
             throw new Error('No se pudo obtener el ID de la matrícula creada');
         }
 
-        // Crear detalle de secciones y rebajar cupos
         for (const secId of seccionesUnicas) {
             await new sql.Request(transaction)
                 .input('matriculaId', sql.Int, matriculaId)
@@ -532,16 +543,20 @@ const crearMatricula = async (data) => {
                     VALUES (@matriculaId, @seccionId, 'Activa')
                 `);
 
-            await new sql.Request(transaction)
+            const updateCupoResult = await new sql.Request(transaction)
                 .input('seccionId', sql.Int, secId)
                 .query(`
                     UPDATE Seccion
                     SET CupoDisponible = CupoDisponible - 1
                     WHERE SeccionID = @seccionId
+                      AND CupoDisponible > 0
                 `);
+
+            if (updateCupoResult.rowsAffected[0] === 0) {
+                throw crearErrorValidacion(`No fue posible reservar cupo en la sección ${secId}`);
+            }
         }
 
-        // Generar número de factura único basado en el último correlativo del año
         const correlativoResult = await new sql.Request(transaction)
             .input('anio', sql.Int, Number(periodo.Anio))
             .query(`
@@ -554,7 +569,6 @@ const crearMatricula = async (data) => {
         const nuevoCorrelativo = ultimoCorrelativo + 1;
         const numeroFactura = `FAC-${periodo.Anio}-${String(nuevoCorrelativo).padStart(4, '0')}`;
 
-        // Crear factura
         const insertFacturaResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .input('periodoId', sql.Int, periodoIdNum)
@@ -596,7 +610,6 @@ const crearMatricula = async (data) => {
             throw new Error('No se pudo obtener el ID de la factura creada');
         }
 
-        // Crear estado de cuenta
         const insertEstadoCuentaResult = await new sql.Request(transaction)
             .input('estudianteId', sql.Int, estudianteIdNum)
             .input('periodoId', sql.Int, periodoIdNum)
@@ -640,7 +653,6 @@ const crearMatricula = async (data) => {
             throw new Error('No se pudo obtener el ID del estado de cuenta creado');
         }
 
-        // Enlazar factura y estado de cuenta con matrícula
         await new sql.Request(transaction)
             .input('matriculaId', sql.Int, matriculaId)
             .input('facturaId', sql.Int, facturaId)
@@ -652,7 +664,15 @@ const crearMatricula = async (data) => {
                 WHERE MatriculaID = @matriculaId
             `);
 
+        await registrarAuditoria({
+            usuario: `Estudiante ${estudianteIdNum}`,
+            accion: 'CREAR_MATRICULA',
+            descripcion: `Se creó la matrícula ${matriculaId} para el estudiante ${estudianteIdNum} en el periodo ${periodoIdNum} con ${seccionesUnicas.length} sección(es). Factura generada: ${numeroFactura}.`,
+            transaction
+        });
+
         await transaction.commit();
+        transactionIniciada = false;
 
         return {
             matriculaId,
@@ -666,7 +686,7 @@ const crearMatricula = async (data) => {
             estadoCuenta: 'Pendiente'
         };
     } catch (error) {
-        if (transaction._aborted !== true) {
+        if (transactionIniciada) {
             await transaction.rollback();
         }
         throw error;

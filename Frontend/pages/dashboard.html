@@ -1,0 +1,196 @@
+<div id="dashboard-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total estudiantes</div>
+        <div class="stat-value" id="dash-total-estudiantes">0</div>
+        <div class="stat-sub">Registrados en el sistema</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Estudiantes activos</div>
+        <div class="stat-value" id="dash-estudiantes-activos">0</div>
+        <div class="stat-sub">Con estado académico activo</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Total cursos</div>
+        <div class="stat-value" id="dash-total-cursos">0</div>
+        <div class="stat-sub">Catálogo académico</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Cursos activos</div>
+        <div class="stat-value" id="dash-cursos-activos">0</div>
+        <div class="stat-sub">Cursos habilitados</div>
+    </div>
+</div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total períodos</div>
+        <div class="stat-value" id="dash-total-periodos">0</div>
+        <div class="stat-sub">Períodos registrados</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Períodos activos</div>
+        <div class="stat-value" id="dash-periodos-activos">0</div>
+        <div class="stat-sub">Disponibles actualmente</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Total secciones</div>
+        <div class="stat-value" id="dash-total-secciones">0</div>
+        <div class="stat-sub">Oferta académica</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Secciones activas</div>
+        <div class="stat-value" id="dash-secciones-activas">0</div>
+        <div class="stat-sub">Con matrícula disponible</div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Matrículas</h3>
+                <p>Estado general del proceso</p>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="resumen-financiero">
+                <div class="mini-card">
+                    <div class="mini-card-label">Total</div>
+                    <div class="mini-card-value" id="dash-total-matriculas">0</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-card-label">Pendientes</div>
+                    <div class="mini-card-value" id="dash-matriculas-pendientes">0</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-card-label">Confirmadas</div>
+                    <div class="mini-card-value" id="dash-matriculas-confirmadas">0</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h3>Finanzas</h3>
+                <p>Resumen económico</p>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="resumen-financiero">
+                <div class="mini-card">
+                    <div class="mini-card-label">Total pagos</div>
+                    <div class="mini-card-value" id="dash-total-pagos">0</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-card-label">Monto recaudado</div>
+                    <div class="mini-card-value" id="dash-monto-recaudado">₡0.00</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-card-label">Facturas pendientes</div>
+                    <div class="mini-card-value" id="dash-facturas-pendientes">0</div>
+                </div>
+            </div>
+
+            <div class="mt-2">
+                <strong>Saldo pendiente total:</strong>
+                <span class="monto-destacado" id="dash-saldo-pendiente-total">₡0.00</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <div>
+            <h3>Matrículas recientes</h3>
+            <p>Últimos movimientos registrados</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Estudiante</th>
+                    <th>Período</th>
+                    <th>Créditos</th>
+                    <th>Costo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-dashboard-matriculas">
+                <tr>
+                    <td colspan="6">Cargando...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <div>
+            <h3>Pagos recientes</h3>
+            <p>Últimos pagos aplicados o registrados</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Estudiante</th>
+                    <th>Factura</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-dashboard-pagos">
+                <tr>
+                    <td colspan="6">Cargando...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3>Períodos registrados</h3>
+            <p>Vista rápida de períodos académicos</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre</th>
+                    <th>Tipo</th>
+                    <th>Año</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-dashboard-periodos">
+                <tr>
+                    <td colspan="5">Cargando...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

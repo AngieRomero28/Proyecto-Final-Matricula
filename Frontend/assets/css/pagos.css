@@ -1,0 +1,96 @@
+.tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid var(--gray-200);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.tab {
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--gray-400);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: 0.15s ease;
+}
+
+.tab:hover {
+    color: var(--gray-600);
+}
+
+.tab.active {
+    color: var(--navy);
+    border-bottom-color: var(--navy);
+}
+
+.financiero-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+}
+
+.monto-destacado {
+    font-family: var(--font-mono);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.estado-pago-box {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+}
+
+.resumen-financiero {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.resumen-financiero .mini-card {
+    background: var(--gray-100);
+    border: 1px solid var(--gray-200);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.resumen-financiero .mini-card-label {
+    font-size: 12px;
+    color: var(--gray-400);
+    margin-bottom: 6px;
+}
+
+.resumen-financiero .mini-card-value {
+    font-family: var(--font-title);
+    color: var(--navy);
+    font-size: 24px;
+}
+
+.pago-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.pago-form-grid .full-width {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 900px) {
+    .resumen-financiero {
+        grid-template-columns: 1fr;
+    }
+
+    .pago-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .pago-form-grid .full-width {
+        grid-column: auto;
+    }
+}

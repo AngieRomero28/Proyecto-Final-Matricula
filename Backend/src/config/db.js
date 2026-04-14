@@ -1,15 +1,28 @@
 require('dotenv').config();
 const sql = require('mssql');
 
+const parseBoolean = (value, defaultValue = false) => {
+    if (value === undefined || value === null || value === '') {
+        return defaultValue;
+    }
+
+    return String(value).trim().toLowerCase() === 'true';
+};
+
+const server = process.env.DB_SERVER || 'ANGIE';
+const database = process.env.DB_DATABASE || 'Sistema_Matricula_Universitaria';
+const user = process.env.DB_USER || 'sa';
+const password = process.env.DB_PASSWORD || '1234';
+const instanceName = process.env.DB_INSTANCE || 'ANGIE';
+
 const dbConfig = {
-    user: process.env.DB_USER || 'sa',
-    password: process.env.DB_PASSWORD || '1234',
-    server: process.env.DB_SERVER || 'ANGIE',
-    database: process.env.DB_DATABASE || 'Sistema_Matricula_Universitaria',
+    user,
+    password,
+    server,
+    database,
     options: {
-        instanceName: process.env.DB_INSTANCE || 'ANGIE',
-        encrypt: String(process.env.DB_ENCRYPT).toLowerCase() === 'true',
-        trustServerCertificate: String(process.env.DB_TRUST_SERVER_CERTIFICATE).toLowerCase() === 'true'
+        encrypt: parseBoolean(process.env.DB_ENCRYPT, false),
+        trustServerCertificate: parseBoolean(process.env.DB_TRUST_SERVER_CERTIFICATE, true)
     },
     pool: {
         max: 10,
@@ -18,13 +31,17 @@ const dbConfig = {
     }
 };
 
+if (instanceName) {
+    dbConfig.options.instanceName = instanceName;
+}
+
 const poolPromise = new sql.ConnectionPool(dbConfig)
     .connect()
-    .then(pool => {
+    .then((pool) => {
         console.log('Conexión exitosa a SQL Server');
         return pool;
     })
-    .catch(error => {
+    .catch((error) => {
         console.error('Error al conectar a SQL Server:', error.message);
         throw error;
     });

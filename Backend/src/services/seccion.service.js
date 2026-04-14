@@ -1,4 +1,4 @@
-const { poolPromise } = require('../config/db');
+const { poolPromise, sql } = require('../config/db');
 
 const obtenerSecciones = async () => {
     const pool = await poolPromise;
@@ -48,7 +48,7 @@ const obtenerSecciones = async () => {
             ON sh.HorarioID = h.HorarioID
         LEFT JOIN Aula a
             ON sh.AulaID = a.AulaID
-        ORDER BY s.SeccionID;
+        ORDER BY s.SeccionID, h.DiaSemana, h.HoraInicio;
     `;
 
     const result = await pool.request().query(query);
@@ -104,12 +104,12 @@ const obtenerSeccionPorId = async (id) => {
         LEFT JOIN Aula a
             ON sh.AulaID = a.AulaID
         WHERE s.SeccionID = @id
-        ORDER BY s.SeccionID;
+        ORDER BY s.SeccionID, h.DiaSemana, h.HoraInicio;
     `;
 
     const result = await pool
         .request()
-        .input('id', id)
+        .input('id', sql.Int, id)
         .query(query);
 
     return result.recordset;

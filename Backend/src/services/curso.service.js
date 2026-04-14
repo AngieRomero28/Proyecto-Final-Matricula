@@ -1,4 +1,4 @@
-const { poolPromise } = require('../config/db');
+const { poolPromise, sql } = require('../config/db');
 
 const obtenerCursos = async () => {
     const pool = await poolPromise;
@@ -36,7 +36,7 @@ const obtenerCursoPorId = async (id) => {
 
     const result = await pool
         .request()
-        .input('id', id)
+        .input('id', sql.Int, id)
         .query(query);
 
     return result.recordset[0] || null;

@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Matrícula Universitaria</title>
+
+    <link rel="icon" href="./assets/img/favicon.ico">
+
+    <link rel="stylesheet" href="./assets/css/variables.css">
+    <link rel="stylesheet" href="./assets/css/layout.css">
+    <link rel="stylesheet" href="./assets/css/components.css">
+    <link rel="stylesheet" href="./assets/css/forms.css">
+    <link rel="stylesheet" href="./assets/css/tables.css">
+    <link rel="stylesheet" href="./assets/css/badges.css">
+    <link rel="stylesheet" href="./assets/css/modals.css">
+    <link rel="stylesheet" href="./assets/css/alerts.css">
+    <link rel="stylesheet" href="./assets/css/dashboard.css">
+    <link rel="stylesheet" href="./assets/css/matricula.css">
+    <link rel="stylesheet" href="./assets/css/pagos.css">
+    <link rel="stylesheet" href="./assets/css/responsive.css">
+    <link rel="stylesheet" href="./assets/css/main.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap"
+        rel="stylesheet"
+    >
+</head>
+<body>
+    <div id="app-loader" class="app-loader">
+        <div class="loader-box">
+            <div class="loader-icon">🎓</div>
+            <h2>Sistema de Matrícula</h2>
+            <p>Cargando interfaz...</p>
+        </div>
+    </div>
+
+    <div id="login-screen" class="login-screen">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="login-logo-icon">🎓</div>
+                <div>
+                    <h1>Universidad</h1>
+                    <span>Sistema de Matrícula</span>
+                </div>
+            </div>
+
+            <h2>Bienvenido</h2>
+            <p>Ingreso institucional al sistema</p>
+
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-user">Correo institucional</label>
+                    <input
+                        type="text"
+                        id="login-user"
+                        name="login-user"
+                        placeholder="usuario@universidad.edu"
+                        value="admin@universidad.edu"
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="login-pass">Contraseña</label>
+                    <input
+                        type="password"
+                        id="login-pass"
+                        name="login-pass"
+                        placeholder="••••••••"
+                        value="admin"
+                        autocomplete="current-password"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="login-role">Rol visual temporal</label>
+                    <select id="login-role" name="login-role">
+                        <option value="admin">Administrador TI</option>
+                        <option value="registro">Registro Académico</option>
+                        <option value="tesoreria">Tesorería</option>
+                        <option value="estudiante">Estudiante</option>
+                        <option value="docente">Docente</option>
+                        <option value="auditor">Auditor Institucional</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary btn-block">
+                    🔐 Ingresar al sistema
+                </button>
+            </form>
+
+            <div class="login-note">
+                Esta pantalla es visual temporal mientras se implementa el SSO institucional real.
+            </div>
+
+            <div id="login-message"></div>
+        </div>
+    </div>
+
+    <div id="system-shell" class="system-shell hidden">
+        <aside id="sidebar-container"></aside>
+
+        <main class="main-area">
+            <header id="topbar-container"></header>
+
+            <section class="page-content">
+                <div class="page-header">
+                    <div>
+                        <h1 id="page-title">Dashboard</h1>
+                        <p id="page-subtitle">Resumen general del sistema</p>
+                    </div>
+                    <div id="page-actions" class="page-actions"></div>
+                </div>
+
+                <div id="global-message"></div>
+                <div id="dashboard-home" class="hidden"></div>
+                <div id="dynamic-page-container" class="hidden"></div>
+                <div id="footer-container"></div>
+            </section>
+        </main>
+    </div>
+
+    <div id="loader-container"></div>
+    <div id="modal-container"></div>
+
+    <!-- Base -->
+    <script src="./assets/js/config.js"></script>
+    <script src="./assets/js/storage.js"></script>
+    <script src="./assets/js/helpers.js"></script>
+    <script src="./assets/js/api.js"></script>
+    <script src="./assets/js/ui.js"></script>
+    <script src="./assets/js/auth.js"></script>
+    <script src="./assets/js/router.js"></script>
+
+    <!-- Modules -->
+    <script src="./assets/js/dashboard.js"></script>
+    <script src="./assets/js/usuarios.js"></script>
+    <script src="./assets/js/programas.js"></script>
+    <script src="./assets/js/reportes.js"></script>
+    <script src="./assets/js/notificaciones.js"></script>
+    <script src="./assets/js/estudiantes.js"></script>
+    <script src="./assets/js/cursos.js"></script>
+    <script src="./assets/js/periodos.js"></script>
+    <script src="./assets/js/secciones.js"></script>
+    <script src="./assets/js/matricula.js"></script>
+    <script src="./assets/js/pagos.js"></script>
+    <script src="./assets/js/facturas.js"></script>
+    <script src="./assets/js/estado-cuenta.js"></script>
+    <script src="./assets/js/comprobante.js"></script>
+    <script src="./assets/js/auditoria.js"></script>
+
+    <!-- App -->
+    <script src="./assets/js/app.js"></script>
+</body>
+</html>

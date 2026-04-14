@@ -1,0 +1,116 @@
+<div class="page-header">
+    <div>
+        <h1>Gestión de Usuarios</h1>
+        <p>Consulta de cuentas del sistema y roles detectados</p>
+    </div>
+
+    <button class="btn btn-primary" id="btn-nuevo-usuario">
+        + Nuevo Usuario
+    </button>
+</div>
+
+<div id="usuarios-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <div>
+            <h3>Resumen de usuarios</h3>
+            <p>Vista rápida de cuentas registradas</p>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="resumen-financiero">
+            <div class="mini-card">
+                <div class="mini-card-label">Total usuarios</div>
+                <div class="mini-card-value" id="usuarios-total">0</div>
+            </div>
+            <div class="mini-card">
+                <div class="mini-card-label">Activos</div>
+                <div class="mini-card-value" id="usuarios-activos">0</div>
+            </div>
+            <div class="mini-card">
+                <div class="mini-card-label">Estudiantes</div>
+                <div class="mini-card-value" id="usuarios-estudiantes">0</div>
+            </div>
+            <div class="mini-card">
+                <div class="mini-card-label">Docentes</div>
+                <div class="mini-card-value" id="usuarios-docentes">0</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <div>
+            <h3>Filtros</h3>
+            <p>Buscar por nombre, correo o identificación</p>
+        </div>
+    </div>
+
+    <div class="card-body">
+        <div class="pago-form-grid">
+            <div class="form-group">
+                <label for="filtro-usuario-buscar">Buscar</label>
+                <input
+                    type="text"
+                    id="filtro-usuario-buscar"
+                    placeholder="Nombre, correo o identificación"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="filtro-usuario-rol">Rol</label>
+                <select id="filtro-usuario-rol">
+                    <option value="">Todos</option>
+                    <option value="Estudiante">Estudiante</option>
+                    <option value="Docente">Docente</option>
+                    <option value="Usuario">Usuario</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="filtro-usuario-estado">Estado</label>
+                <select id="filtro-usuario-estado">
+                    <option value="">Todos</option>
+                    <option value="Activo">Activo</option>
+                    <option value="Inactivo">Inactivo</option>
+                </select>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="btn-filtrar-usuarios">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div>
+            <h3>Listado de usuarios</h3>
+            <p>Usuarios registrados en la base de datos</p>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nombre completo</th>
+                    <th>Correo institucional</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-usuarios">
+                <tr>
+                    <td colspan="6">Cargando usuarios...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
