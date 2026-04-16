@@ -1,20 +1,63 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
-const obtenerAuditoria = async () => {
+const obtenerAuditoria = async (filtros = {}) => {
     const pool = await poolPromise;
 
-    const result = await pool.request().query(`
-        SELECT
-            AuditoriaID,
-            Usuario,
-            Accion,
-            Descripcion,
-            Fecha
-        FROM Auditoria
-        ORDER BY Fecha DESC;
-    `);
+    const condiciones = [];
+    const params = [];
 
-    return result.recordset;
+    if (filtros.usuario) {
+        condiciones.push('a.Usuario LIKE ?');
+        params.push(`%${String(filtros.usuario).trim()}%`);
+    }
+
+    if (filtros.accion) {
+        condiciones.push('a.Accion = ?');
+        params.push(String(filtros.accion).trim());
+    }
+
+    if (filtros.fechaInicio) {
+        condiciones.push('DATE(a.Fecha) >= ?');
+        params.push(filtros.fechaInicio);
+    }
+
+    if (filtros.fechaFin) {
+        condiciones.push('DATE(a.Fecha) <= ?');
+        params.push(filtros.fechaFin);
+    }
+
+    const whereClause = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+
+    const query = `
+        SELECT
+            a.AuditoriaID,
+            a.Usuario,
+            a.Accion,
+            a.Descripcion,
+            a.Fecha
+        FROM Auditoria a
+        ${whereClause}
+        ORDER BY a.Fecha DESC, a.AuditoriaID DESC;
+    `;
+
+    const [rows] = await pool.query(query, params);
+    return rows;
+};
+
+const obtenerResumenAuditoria = async () => {
+    const pool = await poolPromise;
+
+    const query = `
+        SELECT
+            COUNT(*) AS TotalRegistros,
+            COUNT(DISTINCT Usuario) AS TotalUsuarios,
+            COUNT(DISTINCT Accion) AS TotalAcciones,
+            MAX(Fecha) AS UltimoRegistro
+        FROM Auditoria;
+    `;
+
+    const [rows] = await pool.query(query);
+    return rows[0] || {};
 };
 
 const registrarAuditoria = async ({ usuario, accion, descripcion, transaction = null }) => {
@@ -22,21 +65,18 @@ const registrarAuditoria = async ({ usuario, accion, descripcion, transaction = 
         throw new Error('usuario, accion y descripcion son obligatorios para registrar auditoría');
     }
 
-    const request = transaction
-        ? new sql.Request(transaction)
-        : (await poolPromise).request();
+    const executor = transaction || (await poolPromise);
 
-    await request
-        .input('usuario', sql.NVarChar(100), usuario)
-        .input('accion', sql.NVarChar(50), accion)
-        .input('descripcion', sql.NVarChar(255), descripcion)
-        .query(`
-            INSERT INTO Auditoria (Usuario, Accion, Descripcion)
-            VALUES (@usuario, @accion, @descripcion);
-        `);
+    const query = `
+        INSERT INTO Auditoria (Usuario, Accion, Descripcion)
+        VALUES (?, ?, ?);
+    `;
+
+    await executor.query(query, [usuario, accion, descripcion]);
 };
 
 module.exports = {
     obtenerAuditoria,
-    registrarAuditoria
+    obtenerResumenAuditoria,
+            registrarAuditoria
 };

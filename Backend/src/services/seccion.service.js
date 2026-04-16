@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const obtenerSecciones = async () => {
     const pool = await poolPromise;
@@ -32,7 +32,6 @@ const obtenerSecciones = async () => {
             a.CodigoAula,
             a.NombreAula,
             a.Ubicacion
-
         FROM Seccion s
         INNER JOIN Curso c
             ON s.CursoID = c.CursoID
@@ -51,8 +50,8 @@ const obtenerSecciones = async () => {
         ORDER BY s.SeccionID, h.DiaSemana, h.HoraInicio;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerSeccionPorId = async (id) => {
@@ -87,7 +86,6 @@ const obtenerSeccionPorId = async (id) => {
             a.CodigoAula,
             a.NombreAula,
             a.Ubicacion
-
         FROM Seccion s
         INNER JOIN Curso c
             ON s.CursoID = c.CursoID
@@ -103,16 +101,12 @@ const obtenerSeccionPorId = async (id) => {
             ON sh.HorarioID = h.HorarioID
         LEFT JOIN Aula a
             ON sh.AulaID = a.AulaID
-        WHERE s.SeccionID = @id
+        WHERE s.SeccionID = ?
         ORDER BY s.SeccionID, h.DiaSemana, h.HoraInicio;
     `;
 
-    const result = await pool
-        .request()
-        .input('id', sql.Int, id)
-        .query(query);
-
-    return result.recordset;
+    const [rows] = await pool.query(query, [id]);
+    return rows;
 };
 
 module.exports = {

@@ -3,11 +3,8 @@ const { poolPromise } = require('../config/db');
 const obtenerNotificaciones = async () => {
     const pool = await poolPromise;
 
-    const query = `
-        SET NOCOUNT ON;
-
-        -- 1. Matrículas recientes como notificaciones
-        SELECT TOP 10
+    const matriculasQuery = `
+        SELECT
             'MATRICULA' AS TipoNotificacion,
             CONCAT('Matrícula #', m.MatriculaID, ' registrada para ', u.NombreCompleto) AS Titulo,
             CONCAT(
@@ -25,14 +22,16 @@ const obtenerNotificaciones = async () => {
             ON e.UsuarioID = u.UsuarioID
         INNER JOIN Periodo p
             ON m.PeriodoID = p.PeriodoID
-        ORDER BY m.FechaMatricula DESC, m.MatriculaID DESC;
+        ORDER BY m.FechaMatricula DESC, m.MatriculaID DESC
+        LIMIT 10;
+    `;
 
-        -- 2. Pagos recientes como notificaciones
-        SELECT TOP 10
+    const pagosQuery = `
+        SELECT
             'PAGO' AS TipoNotificacion,
             CONCAT('Pago #', pg.PagoID, ' registrado para ', u.NombreCompleto) AS Titulo,
             CONCAT(
-                'Monto: ₡', CONVERT(VARCHAR(50), CAST(pg.MontoPago AS DECIMAL(18,2))),
+                'Monto: ₡', FORMAT(pg.MontoPago, 2),
                 ' | Método: ', pg.MetodoPago
             ) AS Descripcion,
             pg.FechaPago AS FechaEvento,
@@ -43,31 +42,35 @@ const obtenerNotificaciones = async () => {
             ON pg.EstudianteID = e.EstudianteID
         INNER JOIN Usuario u
             ON e.UsuarioID = u.UsuarioID
-        ORDER BY pg.FechaPago DESC, pg.PagoID DESC;
+        ORDER BY pg.FechaPago DESC, pg.PagoID DESC
+        LIMIT 10;
+    `;
 
-        -- 3. Estados de cuenta pendientes/vencidos
-        SELECT TOP 10
+    const financierasQuery = `
+        SELECT
             'FINANCIERA' AS TipoNotificacion,
             CONCAT('Estado de cuenta ', ec.EstadoCuenta, ' - ', u.NombreCompleto) AS Titulo,
             CONCAT(
-                'Factura: ', ISNULL(f.NumeroFactura, 'N/D'),
-                ' | Saldo pendiente: ₡', CONVERT(VARCHAR(50), CAST(ec.SaldoPendiente AS DECIMAL(18,2)))
+                'Factura: ', IFNULL(f.NumeroFactura, 'N/D'),
+                ' | Saldo pendiente: ₡', FORMAT(ec.SaldoPendiente, 2)
             ) AS Descripcion,
-            ISNULL(ec.FechaActualizacion, ec.FechaGeneracion) AS FechaEvento,
+            ec.FechaActualizacion AS FechaEvento,
             ec.EstadoCuenta AS EstadoReferencia,
             ec.EstadoCuentaID AS ReferenciaID
         FROM Estado_Cuenta ec
+        INNER JOIN Factura f
+            ON ec.FacturaID = f.FacturaID
         INNER JOIN Estudiante e
-            ON ec.EstudianteID = e.EstudianteID
+            ON f.EstudianteID = e.EstudianteID
         INNER JOIN Usuario u
             ON e.UsuarioID = u.UsuarioID
-        LEFT JOIN Factura f
-            ON ec.FacturaID = f.FacturaID
         WHERE ec.EstadoCuenta IN ('Pendiente', 'Vencido')
-        ORDER BY ISNULL(ec.FechaActualizacion, ec.FechaGeneracion) DESC, ec.EstadoCuentaID DESC;
+        ORDER BY ec.FechaActualizacion DESC, ec.EstadoCuentaID DESC
+        LIMIT 10;
+    `;
 
-        -- 4. Auditoría reciente
-        SELECT TOP 10
+    const auditoriaQuery = `
+        SELECT
             'AUDITORIA' AS TipoNotificacion,
             CONCAT('Auditoría: ', a.Accion) AS Titulo,
             a.Descripcion AS Descripcion,
@@ -75,15 +78,14 @@ const obtenerNotificaciones = async () => {
             a.Accion AS EstadoReferencia,
             a.AuditoriaID AS ReferenciaID
         FROM Auditoria a
-        ORDER BY a.Fecha DESC, a.AuditoriaID DESC;
+        ORDER BY a.Fecha DESC, a.AuditoriaID DESC
+        LIMIT 10;
     `;
 
-    const result = await pool.request().query(query);
-
-    const matriculas = result.recordsets?.[0] || [];
-    const pagos = result.recordsets?.[1] || [];
-    const financieras = result.recordsets?.[2] || [];
-    const auditoria = result.recordsets?.[3] || [];
+    const [matriculas] = await pool.query(matriculasQuery);
+    const [pagos] = await pool.query(pagosQuery);
+    const [financieras] = await pool.query(financierasQuery);
+    const [auditoria] = await pool.query(auditoriaQuery);
 
     const todas = [...matriculas, ...pagos, ...financieras, ...auditoria]
         .map((item) => ({

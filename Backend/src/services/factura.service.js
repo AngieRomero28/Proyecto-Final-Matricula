@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const obtenerFacturas = async () => {
     const pool = await poolPromise;
@@ -7,9 +7,9 @@ const obtenerFacturas = async () => {
         SELECT
             f.FacturaID,
             f.NumeroFactura,
-            f.FechaEmision,
-            f.Subtotal,
-            f.Descuento,
+            f.FechaFactura AS FechaEmision,
+            0.00 AS Subtotal,
+            0.00 AS Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -33,8 +33,7 @@ const obtenerFacturas = async () => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            m.ComprobanteMatricula
-
+            NULL AS ComprobanteMatricula
         FROM Factura f
         INNER JOIN Estudiante e
             ON f.EstudianteID = e.EstudianteID
@@ -45,12 +44,12 @@ const obtenerFacturas = async () => {
         LEFT JOIN Estado_Cuenta ec
             ON f.FacturaID = ec.FacturaID
         LEFT JOIN Matricula m
-            ON f.FacturaID = m.FacturaID
+            ON f.MatriculaID = m.MatriculaID
         ORDER BY f.FacturaID DESC;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerFacturaPorId = async (id) => {
@@ -60,9 +59,9 @@ const obtenerFacturaPorId = async (id) => {
         SELECT
             f.FacturaID,
             f.NumeroFactura,
-            f.FechaEmision,
-            f.Subtotal,
-            f.Descuento,
+            f.FechaFactura AS FechaEmision,
+            0.00 AS Subtotal,
+            0.00 AS Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -86,8 +85,7 @@ const obtenerFacturaPorId = async (id) => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            m.ComprobanteMatricula
-
+            NULL AS ComprobanteMatricula
         FROM Factura f
         INNER JOIN Estudiante e
             ON f.EstudianteID = e.EstudianteID
@@ -98,16 +96,12 @@ const obtenerFacturaPorId = async (id) => {
         LEFT JOIN Estado_Cuenta ec
             ON f.FacturaID = ec.FacturaID
         LEFT JOIN Matricula m
-            ON f.FacturaID = m.FacturaID
-        WHERE f.FacturaID = @id;
+            ON f.MatriculaID = m.MatriculaID
+        WHERE f.FacturaID = ?;
     `;
 
-    const result = await pool
-        .request()
-        .input('id', sql.Int, id)
-        .query(query);
-
-    return result.recordset[0] || null;
+    const [rows] = await pool.query(query, [id]);
+    return rows[0] || null;
 };
 
 module.exports = {

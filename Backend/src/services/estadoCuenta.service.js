@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const obtenerEstadosCuenta = async () => {
     const pool = await poolPromise;
@@ -10,14 +10,14 @@ const obtenerEstadosCuenta = async () => {
             ec.MontoPagado,
             ec.SaldoPendiente,
             ec.EstadoCuenta,
-            ec.FechaGeneracion,
+            ec.FechaActualizacion AS FechaGeneracion,
             ec.FechaActualizacion,
 
             f.FacturaID,
             f.NumeroFactura,
-            f.FechaEmision,
-            f.Subtotal,
-            f.Descuento,
+            f.FechaFactura AS FechaEmision,
+            0.00 AS Subtotal,
+            0.00 AS Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -35,23 +35,23 @@ const obtenerEstadosCuenta = async () => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            m.ComprobanteMatricula
+            NULL AS ComprobanteMatricula
         FROM Estado_Cuenta ec
         INNER JOIN Factura f
             ON ec.FacturaID = f.FacturaID
         INNER JOIN Estudiante e
-            ON ec.EstudianteID = e.EstudianteID
+            ON f.EstudianteID = e.EstudianteID
         INNER JOIN Usuario u
             ON e.UsuarioID = u.UsuarioID
         INNER JOIN Periodo p
-            ON ec.PeriodoID = p.PeriodoID
+            ON f.PeriodoID = p.PeriodoID
         LEFT JOIN Matricula m
-            ON ec.FacturaID = m.FacturaID
+            ON f.MatriculaID = m.MatriculaID
         ORDER BY ec.EstadoCuentaID DESC;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerEstadoCuentaPorId = async (id) => {
@@ -64,14 +64,14 @@ const obtenerEstadoCuentaPorId = async (id) => {
             ec.MontoPagado,
             ec.SaldoPendiente,
             ec.EstadoCuenta,
-            ec.FechaGeneracion,
+            ec.FechaActualizacion AS FechaGeneracion,
             ec.FechaActualizacion,
 
             f.FacturaID,
             f.NumeroFactura,
-            f.FechaEmision,
-            f.Subtotal,
-            f.Descuento,
+            f.FechaFactura AS FechaEmision,
+            0.00 AS Subtotal,
+            0.00 AS Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -89,27 +89,23 @@ const obtenerEstadoCuentaPorId = async (id) => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            m.ComprobanteMatricula
+            NULL AS ComprobanteMatricula
         FROM Estado_Cuenta ec
         INNER JOIN Factura f
             ON ec.FacturaID = f.FacturaID
         INNER JOIN Estudiante e
-            ON ec.EstudianteID = e.EstudianteID
+            ON f.EstudianteID = e.EstudianteID
         INNER JOIN Usuario u
             ON e.UsuarioID = u.UsuarioID
         INNER JOIN Periodo p
-            ON ec.PeriodoID = p.PeriodoID
+            ON f.PeriodoID = p.PeriodoID
         LEFT JOIN Matricula m
-            ON ec.FacturaID = m.FacturaID
-        WHERE ec.EstadoCuentaID = @id;
+            ON f.MatriculaID = m.MatriculaID
+        WHERE ec.EstadoCuentaID = ?;
     `;
 
-    const result = await pool
-        .request()
-        .input('id', sql.Int, id)
-        .query(query);
-
-    return result.recordset[0] || null;
+    const [rows] = await pool.query(query, [id]);
+    return rows[0] || null;
 };
 
 module.exports = {

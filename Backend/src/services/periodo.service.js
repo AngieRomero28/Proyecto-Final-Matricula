@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const obtenerPeriodos = async () => {
     const pool = await poolPromise;
@@ -18,8 +18,8 @@ const obtenerPeriodos = async () => {
         ORDER BY Anio, PeriodoID;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerPeriodoPorId = async (id) => {
@@ -37,15 +37,11 @@ const obtenerPeriodoPorId = async (id) => {
             FechaFinMatricula,
             EstadoPeriodo
         FROM Periodo
-        WHERE PeriodoID = @id;
+        WHERE PeriodoID = ?;
     `;
 
-    const result = await pool
-        .request()
-        .input('id', sql.Int, id)
-        .query(query);
-
-    return result.recordset[0] || null;
+    const [rows] = await pool.query(query, [id]);
+    return rows[0] || null;
 };
 
 module.exports = {

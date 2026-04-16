@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const obtenerComprobantes = async () => {
     const pool = await poolPromise;
@@ -49,12 +49,12 @@ const obtenerComprobantes = async () => {
         LEFT JOIN Estado_Cuenta ec
             ON m.EstadoCuentaID = ec.EstadoCuentaID
         WHERE m.ComprobanteMatricula IS NOT NULL
-          AND LTRIM(RTRIM(m.ComprobanteMatricula)) <> ''
+          AND TRIM(m.ComprobanteMatricula) <> ''
         ORDER BY m.MatriculaID DESC;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerComprobantePorMatriculaId = async (matriculaId) => {
@@ -105,19 +105,16 @@ const obtenerComprobantePorMatriculaId = async (matriculaId) => {
             ON m.FacturaID = f.FacturaID
         LEFT JOIN Estado_Cuenta ec
             ON m.EstadoCuentaID = ec.EstadoCuentaID
-        WHERE m.MatriculaID = @matriculaId;
+        WHERE m.MatriculaID = ?;
     `;
 
-    const result = await pool
-        .request()
-        .input('matriculaId', sql.Int, matriculaId)
-        .query(query);
+    const [rows] = await pool.query(query, [matriculaId]);
 
-    if (!result.recordset.length) {
+    if (!rows.length) {
         return null;
     }
 
-    const encabezado = result.recordset[0];
+    const encabezado = rows[0];
 
     const detalleQuery = `
         SELECT
@@ -153,18 +150,15 @@ const obtenerComprobantePorMatriculaId = async (matriculaId) => {
             ON sh.HorarioID = h.HorarioID
         LEFT JOIN Aula a
             ON sh.AulaID = a.AulaID
-        WHERE ms.MatriculaID = @matriculaId
+        WHERE ms.MatriculaID = ?
         ORDER BY s.SeccionID;
     `;
 
-    const detalleResult = await pool
-        .request()
-        .input('matriculaId', sql.Int, matriculaId)
-        .query(detalleQuery);
+    const [detalle] = await pool.query(detalleQuery, [matriculaId]);
 
     return {
         encabezado,
-        detalle: detalleResult.recordset
+        detalle
     };
 };
 

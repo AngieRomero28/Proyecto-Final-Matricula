@@ -3,10 +3,7 @@ const { poolPromise } = require('../config/db');
 const obtenerResumenReportes = async () => {
     const pool = await poolPromise;
 
-    const query = `
-        SET NOCOUNT ON;
-
-        -- 1. Resumen general
+    const resumenQuery = `
         SELECT
             (SELECT COUNT(*) FROM Estudiante) AS TotalEstudiantes,
             (SELECT COUNT(*) FROM Curso) AS TotalCursos,
@@ -15,18 +12,19 @@ const obtenerResumenReportes = async () => {
             (SELECT COUNT(*) FROM Matricula) AS TotalMatriculas,
             (SELECT COUNT(*) FROM Pago) AS TotalPagos,
             (SELECT COUNT(*) FROM Factura) AS TotalFacturas,
-            (SELECT ISNULL(SUM(MontoPago), 0) FROM Pago WHERE EstadoPago = 'Aplicado') AS TotalRecaudado,
-            (SELECT ISNULL(SUM(SaldoPendiente), 0) FROM Estado_Cuenta) AS SaldoPendienteTotal;
+            (SELECT IFNULL(SUM(MontoPago), 0) FROM Pago WHERE EstadoPago IN ('Aplicado', 'Exitoso')) AS TotalRecaudado,
+            (SELECT IFNULL(SUM(SaldoPendiente), 0) FROM Estado_Cuenta) AS SaldoPendienteTotal;
+    `;
 
-        -- 2. Matrículas por período
+    const matriculasPorPeriodoQuery = `
         SELECT
             p.PeriodoID,
             p.NombrePeriodo,
             p.TipoPeriodo,
             p.Anio,
             COUNT(m.MatriculaID) AS TotalMatriculas,
-            ISNULL(SUM(m.CreditosTotales), 0) AS TotalCreditos,
-            ISNULL(SUM(m.CostoTotal), 0) AS TotalCostoMatricula
+            IFNULL(SUM(m.CreditosTotales), 0) AS TotalCreditos,
+            IFNULL(SUM(m.CostoTotal), 0) AS TotalCostoMatricula
         FROM Periodo p
         LEFT JOIN Matricula m
             ON p.PeriodoID = m.PeriodoID
@@ -36,28 +34,30 @@ const obtenerResumenReportes = async () => {
             p.TipoPeriodo,
             p.Anio
         ORDER BY p.Anio DESC, p.PeriodoID DESC;
+    `;
 
-        -- 3. Pagos por período
+    const pagosPorPeriodoQuery = `
         SELECT
             p.PeriodoID,
             p.NombrePeriodo,
             p.TipoPeriodo,
             p.Anio,
             COUNT(pg.PagoID) AS TotalPagos,
-            ISNULL(SUM(pg.MontoPago), 0) AS MontoPagado
+            IFNULL(SUM(pg.MontoPago), 0) AS MontoPagado
         FROM Periodo p
         LEFT JOIN Pago pg
             ON p.PeriodoID = pg.PeriodoID
-           AND pg.EstadoPago = 'Aplicado'
+           AND pg.EstadoPago IN ('Aplicado', 'Exitoso')
         GROUP BY
             p.PeriodoID,
             p.NombrePeriodo,
             p.TipoPeriodo,
             p.Anio
         ORDER BY p.Anio DESC, p.PeriodoID DESC;
+    `;
 
-        -- 4. Cursos con más matrícula
-        SELECT TOP 10
+    const cursosMasMatriculadosQuery = `
+        SELECT
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso,
@@ -72,9 +72,11 @@ const obtenerResumenReportes = async () => {
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso
-        ORDER BY TotalInscripciones DESC, c.NombreCurso ASC;
+        ORDER BY TotalInscripciones DESC, c.NombreCurso ASC
+        LIMIT 10;
+    `;
 
-        -- 5. Estados de cuenta
+    const estadosCuentaResumenQuery = `
         SELECT
             COUNT(*) AS TotalEstadosCuenta,
             SUM(CASE WHEN EstadoCuenta = 'Pendiente' THEN 1 ELSE 0 END) AS Pendientes,
@@ -83,14 +85,65 @@ const obtenerResumenReportes = async () => {
         FROM Estado_Cuenta;
     `;
 
-    const result = await pool.request().query(query);
+    const historialCostosQuery = `
+        SELECT
+            TipoPeriodo,
+            Anio,
+            CostoCredito,
+            CostoMatriculaBase,
+            FechaInicioVigencia,
+            FechaFinVigencia,
+            EstadoCosto
+        FROM Costo_Matricula
+        ORDER BY Anio DESC, TipoPeriodo ASC, FechaInicioVigencia DESC;
+    `;
+
+    const estudiantesMorososQuery = `
+        SELECT
+            e.EstudianteID,
+            e.Carnet,
+            u.NombreCompleto,
+            u.CorreoInstitucional,
+            f.FacturaID,
+            f.NumeroFactura,
+            p.PeriodoID,
+            p.NombrePeriodo,
+            p.TipoPeriodo,
+            p.Anio,
+            ec.EstadoCuentaID,
+            ec.MontoTotal,
+            ec.MontoPagado,
+            ec.SaldoPendiente,
+            ec.EstadoCuenta
+        FROM Estado_Cuenta ec
+        INNER JOIN Factura f
+            ON ec.FacturaID = f.FacturaID
+        INNER JOIN Estudiante e
+            ON f.EstudianteID = e.EstudianteID
+        INNER JOIN Usuario u
+            ON e.UsuarioID = u.UsuarioID
+        INNER JOIN Periodo p
+            ON f.PeriodoID = p.PeriodoID
+        WHERE ec.SaldoPendiente > 0
+        ORDER BY ec.SaldoPendiente DESC, u.NombreCompleto ASC;
+    `;
+
+    const [resumenRows] = await pool.query(resumenQuery);
+    const [matriculasPorPeriodo] = await pool.query(matriculasPorPeriodoQuery);
+    const [pagosPorPeriodo] = await pool.query(pagosPorPeriodoQuery);
+    const [cursosMasMatriculados] = await pool.query(cursosMasMatriculadosQuery);
+    const [estadosCuentaRows] = await pool.query(estadosCuentaResumenQuery);
+    const [historialCostos] = await pool.query(historialCostosQuery);
+    const [estudiantesMorosos] = await pool.query(estudiantesMorososQuery);
 
     return {
-        resumen: result.recordsets?.[0]?.[0] || {},
-        matriculasPorPeriodo: result.recordsets?.[1] || [],
-        pagosPorPeriodo: result.recordsets?.[2] || [],
-        cursosMasMatriculados: result.recordsets?.[3] || [],
-        estadosCuentaResumen: result.recordsets?.[4]?.[0] || {}
+        resumen: resumenRows[0] || {},
+        matriculasPorPeriodo,
+        pagosPorPeriodo,
+        cursosMasMatriculados,
+        estadosCuentaResumen: estadosCuentaRows[0] || {},
+        historialCostos,
+        estudiantesMorosos
     };
 };
 

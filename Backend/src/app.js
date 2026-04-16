@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const { connectDB, poolPromise } = require('./config/db');
 
+const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const usuarioRoutes = require('./routes/usuario.routes');
 const programaRoutes = require('./routes/programa.routes');
@@ -17,12 +18,18 @@ const facturaRoutes = require('./routes/factura.routes');
 const estadoCuentaRoutes = require('./routes/estadoCuenta.routes');
 const comprobanteRoutes = require('./routes/comprobante.routes');
 const auditoriaRoutes = require('./routes/auditoria.routes');
+
+// 👇 NUEVA RUTA DEL PORTAL DEL ESTUDIANTE
+const estudiantePortalRoutes = require('./routes/estudiantePortal.routes');
+
 const errorMiddleware = require('./middlewares/error.middleware');
 
 const app = express();
 
 // Conexión a la base de datos
-connectDB();
+connectDB().catch((error) => {
+    console.error('No se pudo establecer la conexión con la base de datos:', error.message);
+});
 
 // Middlewares globales
 app.use(cors({
@@ -45,11 +52,11 @@ app.get('/', (req, res) => {
 app.get('/api/test-db', async (req, res, next) => {
     try {
         const pool = await poolPromise;
-        const result = await pool.request().query('SELECT DB_NAME() AS DB');
+        const [rows] = await pool.query('SELECT DATABASE() AS DB');
 
         res.status(200).json({
             mensaje: 'Conexión OK',
-            db: result.recordset[0].DB
+            db: rows[0]?.DB || null
         });
     } catch (error) {
         next(error);
@@ -57,6 +64,7 @@ app.get('/api/test-db', async (req, res, next) => {
 });
 
 // Rutas API
+app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/programas', programaRoutes);
@@ -72,6 +80,9 @@ app.use('/api/facturas', facturaRoutes);
 app.use('/api/estado-cuenta', estadoCuentaRoutes);
 app.use('/api/comprobantes', comprobanteRoutes);
 app.use('/api/auditoria', auditoriaRoutes);
+
+// 👇 PORTAL DEL ESTUDIANTE (EXCLUSIVO)
+app.use('/api/portal-estudiante', estudiantePortalRoutes);
 
 // Ruta no encontrada
 app.use((req, res) => {

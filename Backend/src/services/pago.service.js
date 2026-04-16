@@ -1,5 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
-const { generarComprobanteMatricula } = require('../utils/helpers');
+const { poolPromise } = require('../config/db');
 const { registrarAuditoria } = require('./auditoria.service');
 
 const crearErrorValidacion = (mensaje, statusCode = 400) => {
@@ -22,8 +21,8 @@ const obtenerPagos = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
+            0.00 AS Subtotal,
+            0.00 AS Descuento,
             f.Total AS TotalFactura,
             f.EstadoFactura,
 
@@ -35,7 +34,7 @@ const obtenerPagos = async () => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            m.ComprobanteMatricula,
+            NULL AS ComprobanteMatricula,
 
             e.EstudianteID,
             e.Carnet,
@@ -49,7 +48,6 @@ const obtenerPagos = async () => {
             pe.NombrePeriodo,
             pe.TipoPeriodo,
             pe.Anio
-
         FROM Pago p
         INNER JOIN Factura f
             ON p.FacturaID = f.FacturaID
@@ -62,12 +60,12 @@ const obtenerPagos = async () => {
         LEFT JOIN Estado_Cuenta ec
             ON f.FacturaID = ec.FacturaID
         LEFT JOIN Matricula m
-            ON f.FacturaID = m.FacturaID
+            ON f.MatriculaID = m.MatriculaID
         ORDER BY p.PagoID DESC;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerPagoPorId = async (id) => {
@@ -84,8 +82,8 @@ const obtenerPagoPorId = async (id) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
+            0.00 AS Subtotal,
+            0.00 AS Descuento,
             f.Total AS TotalFactura,
             f.EstadoFactura,
 
@@ -97,7 +95,7 @@ const obtenerPagoPorId = async (id) => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            m.ComprobanteMatricula,
+            NULL AS ComprobanteMatricula,
 
             e.EstudianteID,
             e.Carnet,
@@ -111,7 +109,6 @@ const obtenerPagoPorId = async (id) => {
             pe.NombrePeriodo,
             pe.TipoPeriodo,
             pe.Anio
-
         FROM Pago p
         INNER JOIN Factura f
             ON p.FacturaID = f.FacturaID
@@ -124,16 +121,12 @@ const obtenerPagoPorId = async (id) => {
         LEFT JOIN Estado_Cuenta ec
             ON f.FacturaID = ec.FacturaID
         LEFT JOIN Matricula m
-            ON f.FacturaID = m.FacturaID
-        WHERE p.PagoID = @id;
+            ON f.MatriculaID = m.MatriculaID
+        WHERE p.PagoID = ?;
     `;
 
-    const result = await pool
-        .request()
-        .input('id', sql.Int, id)
-        .query(query);
-
-    return result.recordset[0] || null;
+    const [rows] = await pool.query(query, [id]);
+    return rows[0] || null;
 };
 
 const registrarPago = async (data) => {
@@ -183,42 +176,39 @@ const registrarPago = async (data) => {
     }
 
     const pool = await poolPromise;
-    const transaction = new sql.Transaction(pool);
-    let transactionIniciada = false;
+    const connection = await pool.getConnection();
 
     try {
-        await transaction.begin();
-        transactionIniciada = true;
+        await connection.beginTransaction();
 
-        const estudianteResult = await new sql.Request(transaction)
-            .input('estudianteId', sql.Int, estudianteIdNum)
-            .query(`
+        const [estudianteRows] = await connection.query(
+            `
                 SELECT EstudianteID
                 FROM Estudiante
-                WHERE EstudianteID = @estudianteId
-            `);
+                WHERE EstudianteID = ?
+            `,
+            [estudianteIdNum]
+        );
 
-        if (estudianteResult.recordset.length === 0) {
+        if (estudianteRows.length === 0) {
             throw crearErrorValidacion('El estudiante no existe', 404);
         }
 
-        const periodoResult = await new sql.Request(transaction)
-            .input('periodoId', sql.Int, periodoIdNum)
-            .query(`
+        const [periodoRows] = await connection.query(
+            `
                 SELECT PeriodoID, EstadoPeriodo
                 FROM Periodo
-                WHERE PeriodoID = @periodoId
-            `);
+                WHERE PeriodoID = ?
+            `,
+            [periodoIdNum]
+        );
 
-        if (periodoResult.recordset.length === 0) {
+        if (periodoRows.length === 0) {
             throw crearErrorValidacion('El periodo no existe', 404);
         }
 
-        const facturaResult = await new sql.Request(transaction)
-            .input('facturaId', sql.Int, facturaIdNum)
-            .input('estudianteId', sql.Int, estudianteIdNum)
-            .input('periodoId', sql.Int, periodoIdNum)
-            .query(`
+        const [facturaRows] = await connection.query(
+            `
                 SELECT
                     f.FacturaID,
                     f.NumeroFactura,
@@ -230,31 +220,36 @@ const registrarPago = async (data) => {
                     ec.SaldoPendiente,
                     ec.EstadoCuenta,
                     m.MatriculaID,
-                    m.EstadoMatricula,
-                    m.ComprobanteMatricula
-                FROM Factura f WITH (UPDLOCK, ROWLOCK)
+                    m.EstudianteID,
+                    m.PeriodoID,
+                    m.EstadoMatricula
+                FROM Factura f
                 LEFT JOIN Estado_Cuenta ec
                     ON f.FacturaID = ec.FacturaID
                 LEFT JOIN Matricula m
-                    ON f.FacturaID = m.FacturaID
-                WHERE f.FacturaID = @facturaId
-                  AND EXISTS (
-                      SELECT 1
-                      FROM Matricula mx
-                      WHERE mx.FacturaID = f.FacturaID
-                        AND mx.EstudianteID = @estudianteId
-                        AND mx.PeriodoID = @periodoId
-                  )
-            `);
+                    ON f.MatriculaID = m.MatriculaID
+                WHERE f.FacturaID = ?
+                FOR UPDATE
+            `,
+            [facturaIdNum]
+        );
 
-        if (facturaResult.recordset.length === 0) {
+        if (facturaRows.length === 0) {
+            throw crearErrorValidacion('La factura no existe', 404);
+        }
+
+        const factura = facturaRows[0];
+
+        if (
+            !factura.MatriculaID ||
+            Number(factura.EstudianteID) !== estudianteIdNum ||
+            Number(factura.PeriodoID) !== periodoIdNum
+        ) {
             throw crearErrorValidacion(
                 'La factura no existe o no pertenece al estudiante y periodo indicado',
                 404
             );
         }
-
-        const factura = facturaResult.recordset[0];
 
         if (!factura.EstadoCuentaID) {
             throw crearErrorValidacion('La factura no tiene un estado de cuenta asociado');
@@ -278,107 +273,98 @@ const registrarPago = async (data) => {
             );
         }
 
-        const insertPagoResult = await new sql.Request(transaction)
-            .input('facturaId', sql.Int, facturaIdNum)
-            .input('estudianteId', sql.Int, estudianteIdNum)
-            .input('periodoId', sql.Int, periodoIdNum)
-            .input('montoPago', sql.Decimal(12, 2), monto)
-            .input('metodoPago', sql.NVarChar(50), metodoPagoTexto)
-            .input('referenciaPago', sql.NVarChar(100), referenciaPagoTexto)
-            .query(`
-                DECLARE @NuevoPago TABLE (PagoID INT);
-
+        const [insertPagoResult] = await connection.query(
+            `
                 INSERT INTO Pago (
                     FacturaID,
                     EstudianteID,
                     PeriodoID,
-                    FechaPago,
                     MontoPago,
                     MetodoPago,
                     ReferenciaPago,
                     EstadoPago
                 )
-                OUTPUT INSERTED.PagoID INTO @NuevoPago(PagoID)
-                VALUES (
-                    @facturaId,
-                    @estudianteId,
-                    @periodoId,
-                    SYSDATETIME(),
-                    @montoPago,
-                    @metodoPago,
-                    @referenciaPago,
-                    'Exitoso'
-                );
+                VALUES (?, ?, ?, ?, ?, ?, 'Exitoso')
+            `,
+            [
+                facturaIdNum,
+                estudianteIdNum,
+                periodoIdNum,
+                monto,
+                metodoPagoTexto,
+                referenciaPagoTexto
+            ]
+        );
 
-                SELECT PagoID FROM @NuevoPago;
-            `);
-
-        const pagoId = insertPagoResult.recordset[0]?.PagoID;
+        const pagoId = insertPagoResult.insertId;
 
         if (!pagoId) {
             throw new Error('No se pudo obtener el ID del pago registrado');
         }
 
-        const estadoActualizadoResult = await new sql.Request(transaction)
-            .input('facturaId', sql.Int, facturaIdNum)
-            .query(`
-                SELECT
-                    f.FacturaID,
-                    f.NumeroFactura,
-                    f.EstadoFactura,
-                    ec.EstadoCuentaID,
-                    ec.MontoPagado,
-                    ec.SaldoPendiente,
-                    ec.EstadoCuenta,
-                    m.MatriculaID,
-                    m.EstadoMatricula,
-                    m.ComprobanteMatricula,
-                    p.Anio
-                FROM Factura f
-                LEFT JOIN Estado_Cuenta ec
-                    ON f.FacturaID = ec.FacturaID
-                LEFT JOIN Matricula m
-                    ON f.FacturaID = m.FacturaID
-                LEFT JOIN Periodo p
-                    ON m.PeriodoID = p.PeriodoID
-                WHERE f.FacturaID = @facturaId
-            `);
+        const nuevoMontoPagado = Number(factura.MontoPagado || 0) + monto;
+        const nuevoSaldoPendiente = Number(factura.SaldoPendiente || 0) - monto;
 
-        const estadoActualizado = estadoActualizadoResult.recordset[0];
+        let nuevoEstadoCuenta = 'Pendiente';
+        let nuevoEstadoFactura = 'Pendiente';
+        let nuevoEstadoMatricula = factura.EstadoMatricula || 'Pendiente';
 
-        if (!estadoActualizado) {
-            throw new Error('No se pudo obtener el estado actualizado de la factura');
+        if (nuevoSaldoPendiente <= 0) {
+            nuevoEstadoCuenta = 'Pagado';
+            nuevoEstadoFactura = 'Pagada';
+            nuevoEstadoMatricula = 'Confirmada';
         }
 
-        if (
-            estadoActualizado.MatriculaID &&
-            Number(estadoActualizado.SaldoPendiente) === 0 &&
-            estadoActualizado.EstadoFactura === 'Pagada'
-        ) {
-            const comprobanteMatricula =
-                estadoActualizado.ComprobanteMatricula ||
-                generarComprobanteMatricula(estadoActualizado.MatriculaID);
+        await connection.query(
+            `
+                UPDATE Estado_Cuenta
+                SET
+                    MontoPagado = ?,
+                    SaldoPendiente = ?,
+                    EstadoCuenta = ?,
+                    FechaActualizacion = CURRENT_TIMESTAMP
+                WHERE EstadoCuentaID = ?
+            `,
+            [
+                nuevoMontoPagado,
+                nuevoSaldoPendiente < 0 ? 0 : nuevoSaldoPendiente,
+                nuevoEstadoCuenta,
+                factura.EstadoCuentaID
+            ]
+        );
 
-            await new sql.Request(transaction)
-                .input('matriculaId', sql.Int, estadoActualizado.MatriculaID)
-                .input('comprobanteMatricula', sql.NVarChar(255), comprobanteMatricula)
-                .query(`
+        await connection.query(
+            `
+                UPDATE Factura
+                SET EstadoFactura = ?
+                WHERE FacturaID = ?
+            `,
+            [nuevoEstadoFactura, facturaIdNum]
+        );
+
+        if (factura.MatriculaID) {
+            await connection.query(
+                `
                     UPDATE Matricula
-                    SET EstadoMatricula = 'Confirmada',
-                        ComprobanteMatricula = @comprobanteMatricula
-                    WHERE MatriculaID = @matriculaId
-                `);
+                    SET EstadoMatricula = ?
+                    WHERE MatriculaID = ?
+                `,
+                [nuevoEstadoMatricula, factura.MatriculaID]
+            );
         }
 
-        await registrarAuditoria({
-            usuario: `Estudiante ${estudianteIdNum}`,
-            accion: 'REGISTRAR_PAGO',
-            descripcion: `Se registró el pago ${pagoId} para la factura ${facturaIdNum} del periodo ${periodoIdNum} por un monto de ${monto.toFixed(2)} mediante ${metodoPagoTexto}.`,
-            transaction
-        });
+        try {
+            await registrarAuditoria({
+                usuario: `Estudiante ${estudianteIdNum}`,
+                accion: 'REGISTRAR_PAGO',
+                descripcion: `Se registró el pago ${pagoId} para la factura ${facturaIdNum} del periodo ${periodoIdNum} por un monto de ${monto.toFixed(2)} mediante ${metodoPagoTexto}.`,
+                transaction: connection
+            });
+        } catch (auditError) {
+            console.warn('No se pudo registrar auditoría:', auditError.message);
+        }
 
-        await transaction.commit();
-        transactionIniciada = false;
+        await connection.commit();
 
         const pagoRegistrado = await obtenerPagoPorId(pagoId);
 
@@ -393,10 +379,10 @@ const registrarPago = async (data) => {
             estadoPago: 'Exitoso'
         };
     } catch (error) {
-        if (transactionIniciada) {
-            await transaction.rollback();
-        }
+        await connection.rollback();
         throw error;
+    } finally {
+        connection.release();
     }
 };
 

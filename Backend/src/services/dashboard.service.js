@@ -3,10 +3,7 @@ const { poolPromise } = require('../config/db');
 const obtenerResumenDashboard = async () => {
     const pool = await poolPromise;
 
-    const query = `
-        SET NOCOUNT ON;
-
-        -- 1. Resumen general
+    const resumenQuery = `
         SELECT
             (SELECT COUNT(*) FROM Estudiante) AS TotalEstudiantes,
             (SELECT COUNT(*) FROM Estudiante WHERE EstadoAcademico = 'Activo') AS EstudiantesActivos,
@@ -26,7 +23,7 @@ const obtenerResumenDashboard = async () => {
 
             (SELECT COUNT(*) FROM Pago) AS TotalPagos,
             (
-                SELECT ISNULL(SUM(MontoPago), 0)
+                SELECT IFNULL(SUM(MontoPago), 0)
                 FROM Pago
                 WHERE EstadoPago IN ('Exitoso', 'Aplicado')
             ) AS MontoRecaudado,
@@ -38,13 +35,14 @@ const obtenerResumenDashboard = async () => {
             ) AS FacturasPendientes,
 
             (
-                SELECT ISNULL(SUM(SaldoPendiente), 0)
+                SELECT IFNULL(SUM(SaldoPendiente), 0)
                 FROM Estado_Cuenta
                 WHERE SaldoPendiente > 0
             ) AS SaldoPendienteTotal;
+    `;
 
-        -- 2. Matrículas recientes
-        SELECT TOP 5
+    const matriculasRecientesQuery = `
+        SELECT
             m.MatriculaID,
             m.FechaMatricula,
             m.CreditosTotales,
@@ -67,10 +65,12 @@ const obtenerResumenDashboard = async () => {
             ON e.UsuarioID = u.UsuarioID
         INNER JOIN Periodo p
             ON m.PeriodoID = p.PeriodoID
-        ORDER BY m.FechaMatricula DESC, m.MatriculaID DESC;
+        ORDER BY m.FechaMatricula DESC, m.MatriculaID DESC
+        LIMIT 5;
+    `;
 
-        -- 3. Pagos recientes
-        SELECT TOP 5
+    const pagosRecientesQuery = `
+        SELECT
             pg.PagoID,
             pg.FechaPago,
             pg.MontoPago,
@@ -98,9 +98,11 @@ const obtenerResumenDashboard = async () => {
             ON e.UsuarioID = u.UsuarioID
         INNER JOIN Periodo p
             ON pg.PeriodoID = p.PeriodoID
-        ORDER BY pg.FechaPago DESC, pg.PagoID DESC;
+        ORDER BY pg.FechaPago DESC, pg.PagoID DESC
+        LIMIT 5;
+    `;
 
-        -- 4. Períodos
+    const periodosQuery = `
         SELECT
             PeriodoID,
             NombrePeriodo,
@@ -115,13 +117,16 @@ const obtenerResumenDashboard = async () => {
         ORDER BY Anio DESC, PeriodoID DESC;
     `;
 
-    const result = await pool.request().query(query);
+    const [resumenRows] = await pool.query(resumenQuery);
+    const [matriculasRecientes] = await pool.query(matriculasRecientesQuery);
+    const [pagosRecientes] = await pool.query(pagosRecientesQuery);
+    const [periodos] = await pool.query(periodosQuery);
 
     return {
-        resumen: result.recordsets?.[0]?.[0] || {},
-        matriculasRecientes: result.recordsets?.[1] || [],
-        pagosRecientes: result.recordsets?.[2] || [],
-        periodos: result.recordsets?.[3] || []
+        resumen: resumenRows[0] || {},
+        matriculasRecientes,
+        pagosRecientes,
+        periodos
     };
 };
 

@@ -1,4 +1,4 @@
-const { poolPromise, sql } = require('../config/db');
+const { poolPromise } = require('../config/db');
 
 const obtenerProgramas = async () => {
     const pool = await poolPromise;
@@ -19,8 +19,8 @@ const obtenerProgramas = async () => {
         ORDER BY pa.ProgramaAcademicoID DESC;
     `;
 
-    const result = await pool.request().query(query);
-    return result.recordset;
+    const [rows] = await pool.query(query);
+    return rows;
 };
 
 const obtenerProgramaPorId = async (id) => {
@@ -35,19 +35,15 @@ const obtenerProgramaPorId = async (id) => {
         FROM Programa_Academico pa
         LEFT JOIN Estudiante e
             ON pa.ProgramaAcademicoID = e.ProgramaAcademicoID
-        WHERE pa.ProgramaAcademicoID = @id
+        WHERE pa.ProgramaAcademicoID = ?
         GROUP BY
             pa.ProgramaAcademicoID,
             pa.CodigoPrograma,
             pa.NombrePrograma;
     `;
 
-    const result = await pool
-        .request()
-        .input('id', sql.Int, id)
-        .query(query);
-
-    return result.recordset[0] || null;
+    const [rows] = await pool.query(query, [id]);
+    return rows[0] || null;
 };
 
 module.exports = {

@@ -1,61 +1,43 @@
 require('dotenv').config();
-const sql = require('mssql');
+const mysql = require('mysql2/promise');
 
-const parseBoolean = (value, defaultValue = false) => {
-    if (value === undefined || value === null || value === '') {
-        return defaultValue;
-    }
-
-    return String(value).trim().toLowerCase() === 'true';
-};
-
-const server = process.env.DB_SERVER || 'ANGIE';
-const database = process.env.DB_DATABASE || 'Sistema_Matricula_Universitaria';
-const user = process.env.DB_USER || 'sa';
+const host = process.env.DB_HOST || '127.0.0.1';
+const port = Number(process.env.DB_PORT || 3306);
+const database = process.env.DB_NAME || 'Sistema_Matricula_Universitaria';
+const user = process.env.DB_USER || 'root';
 const password = process.env.DB_PASSWORD || '1234';
-const instanceName = process.env.DB_INSTANCE || 'ANGIE';
 
-const dbConfig = {
+const pool = mysql.createPool({
+    host,
+    port,
     user,
     password,
-    server,
     database,
-    options: {
-        encrypt: parseBoolean(process.env.DB_ENCRYPT, false),
-        trustServerCertificate: parseBoolean(process.env.DB_TRUST_SERVER_CERTIFICATE, true)
-    },
-    pool: {
-        max: 10,
-        min: 0,
-        idleTimeoutMillis: 30000
-    }
-};
-
-if (instanceName) {
-    dbConfig.options.instanceName = instanceName;
-}
-
-const poolPromise = new sql.ConnectionPool(dbConfig)
-    .connect()
-    .then((pool) => {
-        console.log('Conexión exitosa a SQL Server');
-        return pool;
-    })
-    .catch((error) => {
-        console.error('Error al conectar a SQL Server:', error.message);
-        throw error;
-    });
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    charset: 'utf8mb4'
+});
 
 const connectDB = async () => {
+    let connection;
+
     try {
-        await poolPromise;
+        connection = await pool.getConnection();
+        await connection.ping();
+        console.log('Conexión exitosa a MySQL');
     } catch (error) {
-        console.error('No se pudo establecer la conexión con la base de datos:', error.message);
+        console.error('Error al conectar a MySQL:', error.message);
+        throw error;
+    } finally {
+        if (connection) {
+            connection.release();
+        }
     }
 };
 
 module.exports = {
-    sql,
-    poolPromise,
+    pool,
+    poolPromise: pool,
     connectDB
 };

@@ -10,9 +10,8 @@ const obtenerUsuarios = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerUsuarios:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los usuarios',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los usuarios'
         });
     }
 };
@@ -41,14 +40,86 @@ const obtenerUsuarioPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerUsuarioPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el usuario',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el usuario'
+        });
+    }
+};
+
+const loginUsuario = async (req, res) => {
+    try {
+        const { username, password } = req.body;
+
+        const usuario = await usuarioService.loginUsuario({ username, password });
+
+        res.status(200).json({
+            mensaje: 'Inicio de sesión correcto',
+            data: usuario
+        });
+    } catch (error) {
+        console.error('Error en loginUsuario:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al iniciar sesión'
+        });
+    }
+};
+
+const obtenerPerfil = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (!id || isNaN(id)) {
+            return res.status(400).json({
+                mensaje: 'El id del usuario debe ser numérico'
+            });
+        }
+
+        const usuario = await usuarioService.obtenerUsuarioPorId(Number(id));
+
+        if (!usuario) {
+            return res.status(404).json({
+                mensaje: 'Usuario no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            mensaje: 'Perfil obtenido correctamente',
+            data: usuario
+        });
+    } catch (error) {
+        console.error('Error en obtenerPerfil:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el perfil'
+        });
+    }
+};
+
+const cambiarPassword = async (req, res) => {
+    try {
+        const { usuarioId, passwordActual, passwordNueva } = req.body;
+
+        const resultado = await usuarioService.cambiarPassword({
+            usuarioId,
+            passwordActual,
+            passwordNueva
+        });
+
+        res.status(200).json({
+            mensaje: 'Contraseña actualizada correctamente',
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error en cambiarPassword:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al cambiar la contraseña'
         });
     }
 };
 
 module.exports = {
     obtenerUsuarios,
-    obtenerUsuarioPorId
+    obtenerUsuarioPorId,
+    loginUsuario,
+    obtenerPerfil,
+    cambiarPassword
 };
