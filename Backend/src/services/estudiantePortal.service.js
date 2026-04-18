@@ -241,7 +241,7 @@ const obtenerHistorialFinanciero = async (estudianteId) => {
                 p.Anio,
 
                 ec.EstadoCuentaID,
-                IFNULL(ec.MontoTotal, f.Total, 0) AS MontoTotal,
+                COALESCE(ec.MontoTotal, f.Total, 0) AS MontoTotal,
                 IFNULL(ec.MontoPagado, 0) AS MontoPagado,
                 IFNULL(ec.SaldoPendiente, 0) AS SaldoPendiente,
                 IFNULL(ec.EstadoCuenta, 'N/D') AS EstadoCuenta,
