@@ -10,9 +10,8 @@ const obtenerFacturas = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerFacturas:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener las facturas',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener las facturas'
         });
     }
 };
@@ -21,7 +20,7 @@ const obtenerFacturaPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id de la factura debe ser numérico'
             });
@@ -41,9 +40,8 @@ const obtenerFacturaPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerFacturaPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener la factura',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener la factura'
         });
     }
 };

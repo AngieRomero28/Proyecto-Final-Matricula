@@ -2,7 +2,8 @@ const authService = require('../services/auth.service');
 
 const login = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const username = req.body?.username ?? req.body?.Username ?? '';
+        const password = req.body?.password ?? req.body?.Password ?? '';
 
         const data = await authService.login({ username, password });
 
@@ -20,7 +21,21 @@ const login = async (req, res) => {
 
 const cambiarPassword = async (req, res) => {
     try {
-        const { actual, nueva } = req.body;
+        if (!req.usuario || !req.usuario.UsuarioID) {
+            return res.status(401).json({
+                mensaje: 'No autorizado. Debe iniciar sesión.'
+            });
+        }
+
+        const actual =
+            req.body?.actual ??
+            req.body?.passwordActual ??
+            '';
+
+        const nueva =
+            req.body?.nueva ??
+            req.body?.passwordNueva ??
+            '';
 
         const result = await authService.cambiarPassword({
             usuarioId: req.usuario.UsuarioID,

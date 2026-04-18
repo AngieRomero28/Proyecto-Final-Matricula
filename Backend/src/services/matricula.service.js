@@ -30,7 +30,7 @@ const obtenerMatriculas = async () => {
             m.CreditosTotales,
             m.CostoTotal,
             m.EstadoMatricula,
-            NULL AS ComprobanteMatricula,
+            m.ComprobanteMatricula,
 
             e.EstudianteID,
             e.Carnet,
@@ -48,8 +48,8 @@ const obtenerMatriculas = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
-            0.00 AS Subtotal,
-            0.00 AS Descuento,
+            f.Subtotal,
+            f.Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -78,6 +78,11 @@ const obtenerMatriculas = async () => {
 
 const obtenerMatriculaPorId = async (id) => {
     const pool = await poolPromise;
+    const matriculaId = Number(id);
+
+    if (Number.isNaN(matriculaId) || matriculaId <= 0) {
+        return [];
+    }
 
     const query = `
         SELECT
@@ -86,7 +91,7 @@ const obtenerMatriculaPorId = async (id) => {
             m.CreditosTotales,
             m.CostoTotal,
             m.EstadoMatricula,
-            NULL AS ComprobanteMatricula,
+            m.ComprobanteMatricula,
 
             e.EstudianteID,
             e.Carnet,
@@ -104,8 +109,8 @@ const obtenerMatriculaPorId = async (id) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            0.00 AS Subtotal,
-            0.00 AS Descuento,
+            f.Subtotal,
+            f.Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -146,12 +151,17 @@ const obtenerMatriculaPorId = async (id) => {
         ORDER BY m.MatriculaID, s.SeccionID;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [matriculaId]);
     return rows;
 };
 
 const obtenerMatriculasPorEstudiante = async (estudianteId) => {
     const pool = await poolPromise;
+    const estudianteIdNum = Number(estudianteId);
+
+    if (Number.isNaN(estudianteIdNum) || estudianteIdNum <= 0) {
+        return [];
+    }
 
     const query = `
         SELECT
@@ -160,6 +170,7 @@ const obtenerMatriculasPorEstudiante = async (estudianteId) => {
             m.CreditosTotales,
             m.CostoTotal,
             m.EstadoMatricula,
+            m.ComprobanteMatricula,
 
             p.PeriodoID,
             p.NombrePeriodo,
@@ -168,6 +179,8 @@ const obtenerMatriculasPorEstudiante = async (estudianteId) => {
 
             f.FacturaID,
             f.NumeroFactura,
+            f.Subtotal,
+            f.Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -186,7 +199,7 @@ const obtenerMatriculasPorEstudiante = async (estudianteId) => {
         ORDER BY p.Anio DESC, m.MatriculaID DESC;
     `;
 
-    const [rows] = await pool.query(query, [estudianteId]);
+    const [rows] = await pool.query(query, [estudianteIdNum]);
     return rows;
 };
 
@@ -194,7 +207,12 @@ const obtenerOfertaMatriculablePorEstudiante = async (estudianteId, periodoId) =
     const estudianteIdNum = Number(estudianteId);
     const periodoIdNum = Number(periodoId);
 
-    if (Number.isNaN(estudianteIdNum) || Number.isNaN(periodoIdNum)) {
+    if (
+        Number.isNaN(estudianteIdNum) ||
+        estudianteIdNum <= 0 ||
+        Number.isNaN(periodoIdNum) ||
+        periodoIdNum <= 0
+    ) {
         throw crearErrorValidacion('estudianteId y periodoId deben ser numéricos');
     }
 
@@ -403,26 +421,42 @@ const obtenerOfertaMatriculablePorEstudiante = async (estudianteId, periodoId) =
 };
 
 const crearMatricula = async (data) => {
-    const { estudianteId, periodoId, secciones } = data;
+    const {
+        estudianteId,
+        periodoId,
+        secciones,
+        seccionIds
+    } = data || {};
 
-    if (!estudianteId || !periodoId || !Array.isArray(secciones) || secciones.length === 0) {
+    const listaSecciones = Array.isArray(secciones)
+        ? secciones
+        : Array.isArray(seccionIds)
+            ? seccionIds
+            : [];
+
+    if (!estudianteId || !periodoId || listaSecciones.length === 0) {
         throw crearErrorValidacion('Debe enviar estudianteId, periodoId y al menos una sección');
     }
 
     const estudianteIdNum = Number(estudianteId);
     const periodoIdNum = Number(periodoId);
-    const seccionesNormalizadas = secciones.map(Number);
+    const seccionesNormalizadas = listaSecciones.map(Number);
     const seccionesUnicas = [...new Set(seccionesNormalizadas)];
 
-    if (Number.isNaN(estudianteIdNum) || Number.isNaN(periodoIdNum)) {
+    if (
+        Number.isNaN(estudianteIdNum) ||
+        estudianteIdNum <= 0 ||
+        Number.isNaN(periodoIdNum) ||
+        periodoIdNum <= 0
+    ) {
         throw crearErrorValidacion('estudianteId y periodoId deben ser numéricos');
     }
 
-    if (seccionesNormalizadas.some((sec) => Number.isNaN(sec))) {
+    if (seccionesNormalizadas.some((sec) => Number.isNaN(sec) || sec <= 0)) {
         throw crearErrorValidacion('Todas las secciones deben ser numéricas');
     }
 
-    if (seccionesUnicas.length !== secciones.length) {
+    if (seccionesUnicas.length !== listaSecciones.length) {
         throw crearErrorValidacion('No se pueden enviar secciones repetidas');
     }
 
@@ -755,9 +789,11 @@ const crearMatricula = async (data) => {
         }
 
         const costo = costoRows[0];
-        const costoCredito = Number(costo.CostoCredito);
-        const costoMatriculaBase = Number(costo.CostoMatriculaBase);
-        const costoTotal = (costoCredito * creditosTotalesNuevos) + costoMatriculaBase;
+        const costoCredito = Number(costo.CostoCredito || 0);
+        const costoMatriculaBase = Number(costo.CostoMatriculaBase || 0);
+        const subtotal = costoCredito * creditosTotalesNuevos;
+        const descuento = 0;
+        const costoTotal = subtotal + costoMatriculaBase - descuento;
 
         const [insertMatriculaResult] = await connection.query(
             `
@@ -766,9 +802,10 @@ const crearMatricula = async (data) => {
                     PeriodoID,
                     CreditosTotales,
                     CostoTotal,
-                    EstadoMatricula
+                    EstadoMatricula,
+                    ComprobanteMatricula
                 )
-                VALUES (?, ?, ?, ?, 'Pendiente')
+                VALUES (?, ?, ?, ?, 'Pendiente', NULL)
             `,
             [estudianteIdNum, periodoIdNum, creditosTotalesNuevos, costoTotal]
         );
@@ -834,12 +871,22 @@ const crearMatricula = async (data) => {
                     MatriculaID,
                     EstudianteID,
                     PeriodoID,
+                    Subtotal,
+                    Descuento,
                     Total,
                     EstadoFactura
                 )
-                VALUES (?, ?, ?, ?, ?, 'Pendiente')
+                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pendiente')
             `,
-            [numeroFactura, matriculaId, estudianteIdNum, periodoIdNum, costoTotal]
+            [
+                numeroFactura,
+                matriculaId,
+                estudianteIdNum,
+                periodoIdNum,
+                subtotal,
+                descuento,
+                costoTotal
+            ]
         );
 
         const facturaId = insertFacturaResult.insertId;
@@ -896,6 +943,8 @@ const crearMatricula = async (data) => {
             estadoCuentaId,
             numeroFactura,
             creditosTotales: creditosTotalesNuevos,
+            subtotal,
+            descuento,
             costoTotal,
             estadoMatricula: 'Pendiente',
             estadoFactura: 'Pendiente',

@@ -20,7 +20,7 @@ const obtenerUsuarioPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id del usuario debe ser numérico'
             });
@@ -48,7 +48,8 @@ const obtenerUsuarioPorId = async (req, res) => {
 
 const loginUsuario = async (req, res) => {
     try {
-        const { username, password } = req.body;
+        const username = req.body?.username ?? req.body?.Username ?? '';
+        const password = req.body?.password ?? req.body?.Password ?? '';
 
         const usuario = await usuarioService.loginUsuario({ username, password });
 
@@ -68,7 +69,7 @@ const obtenerPerfil = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id del usuario debe ser numérico'
             });
@@ -96,7 +97,20 @@ const obtenerPerfil = async (req, res) => {
 
 const cambiarPassword = async (req, res) => {
     try {
-        const { usuarioId, passwordActual, passwordNueva } = req.body;
+        const usuarioId =
+            req.body?.usuarioId ??
+            req.usuario?.UsuarioID ??
+            null;
+
+        const passwordActual =
+            req.body?.passwordActual ??
+            req.body?.actual ??
+            '';
+
+        const passwordNueva =
+            req.body?.passwordNueva ??
+            req.body?.nueva ??
+            '';
 
         const resultado = await usuarioService.cambiarPassword({
             usuarioId,

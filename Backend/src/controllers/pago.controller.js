@@ -10,9 +10,8 @@ const obtenerPagos = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerPagos:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener pagos',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener pagos'
         });
     }
 };
@@ -21,9 +20,9 @@ const obtenerPagoPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
-                mensaje: 'ID inválido'
+                mensaje: 'El id del pago debe ser numérico'
             });
         }
 
@@ -41,16 +40,15 @@ const obtenerPagoPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerPagoPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener pago',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener pago'
         });
     }
 };
 
 const registrarPago = async (req, res) => {
     try {
-        const data = req.body;
+        const data = req.body || {};
 
         const resultado = await pagoService.registrarPago(data);
 
@@ -60,7 +58,6 @@ const registrarPago = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en registrarPago:', error);
-
         res.status(error.statusCode || 500).json({
             mensaje: error.message || 'Error al registrar el pago'
         });

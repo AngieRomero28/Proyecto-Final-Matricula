@@ -14,15 +14,18 @@ window.Modules.comprobante = (function () {
         const inputBuscar = document.getElementById('filtro-comprobante-buscar');
         const selectEstado = document.getElementById('filtro-comprobante-estado');
 
-        if (btnFiltrar) {
+        if (btnFiltrar && !btnFiltrar.dataset.bound) {
+            btnFiltrar.dataset.bound = 'true';
             btnFiltrar.addEventListener('click', aplicarFiltros);
         }
 
-        if (inputBuscar) {
+        if (inputBuscar && !inputBuscar.dataset.bound) {
+            inputBuscar.dataset.bound = 'true';
             inputBuscar.addEventListener('input', aplicarFiltros);
         }
 
-        if (selectEstado) {
+        if (selectEstado && !selectEstado.dataset.bound) {
+            selectEstado.dataset.bound = 'true';
             selectEstado.addEventListener('change', aplicarFiltros);
         }
     }
@@ -32,10 +35,10 @@ window.Modules.comprobante = (function () {
 
         try {
             if (tabla) {
-                tabla.innerHTML = `<tr><td colspan="8">Cargando comprobantes...</td></tr>`;
+                tabla.innerHTML = '<tr><td colspan="8">Cargando comprobantes...</td></tr>';
             }
 
-            const response = await ApiService.obtenerComprobantes();
+            const response = await window.ApiService.obtenerComprobantes();
             comprobantes = Array.isArray(response.data) ? response.data : [];
             comprobantesFiltrados = [...comprobantes];
 
@@ -44,26 +47,36 @@ window.Modules.comprobante = (function () {
         } catch (error) {
             console.error('Error cargando comprobantes:', error);
             if (tabla) {
-                tabla.innerHTML = `<tr><td colspan="8">Error cargando comprobantes</td></tr>`;
+                tabla.innerHTML = '<tr><td colspan="8">Error cargando comprobantes</td></tr>';
             }
-            UI.showMessage('comprobante-message', 'danger', error.message || 'No se pudieron cargar los comprobantes.');
+            window.UI.showMessage(
+                'comprobante-message',
+                'danger',
+                error.message || 'No se pudieron cargar los comprobantes.'
+            );
         }
     }
 
     function aplicarFiltros() {
-        const texto = String(document.getElementById('filtro-comprobante-buscar')?.value || '').trim().toLowerCase();
-        const estado = String(document.getElementById('filtro-comprobante-estado')?.value || '').trim();
+        const texto = String(document.getElementById('filtro-comprobante-buscar')?.value || '')
+            .trim()
+            .toLowerCase();
+
+        const estado = String(document.getElementById('filtro-comprobante-estado')?.value || '')
+            .trim()
+            .toLowerCase();
 
         comprobantesFiltrados = comprobantes.filter((item) => {
+            const estadoMatricula = String(item.EstadoMatricula || item.Estado || '').trim().toLowerCase();
+
             const coincideTexto =
                 !texto ||
-                String(item.ComprobanteMatricula || '').toLowerCase().includes(texto) ||
-                String(item.NombreEstudiante || '').toLowerCase().includes(texto) ||
+                String(item.ComprobanteMatricula || item.Comprobante || '').toLowerCase().includes(texto) ||
+                String(item.NombreEstudiante || item.Estudiante || '').toLowerCase().includes(texto) ||
                 String(item.Carnet || '').toLowerCase().includes(texto) ||
                 String(item.NombrePeriodo || '').toLowerCase().includes(texto);
 
-            const coincideEstado =
-                !estado || String(item.EstadoMatricula || '') === estado;
+            const coincideEstado = !estado || estadoMatricula === estado;
 
             return coincideTexto && coincideEstado;
         });
@@ -74,12 +87,18 @@ window.Modules.comprobante = (function () {
 
     function renderResumen() {
         const total = comprobantesFiltrados.length;
-        const totalCreditos = comprobantesFiltrados.reduce((acc, item) => acc + Number(item.CreditosTotales || 0), 0);
-        const totalMonto = comprobantesFiltrados.reduce((acc, item) => acc + Number(item.CostoTotal || 0), 0);
+        const totalCreditos = comprobantesFiltrados.reduce(
+            (acc, item) => acc + Number(item.CreditosTotales || item.Creditos || 0),
+            0
+        );
+        const totalMonto = comprobantesFiltrados.reduce(
+            (acc, item) => acc + Number(item.CostoTotal || item.MontoTotal || 0),
+            0
+        );
 
         setText('comprobante-total', total);
         setText('comprobante-creditos', totalCreditos);
-        setText('comprobante-monto-total', Helpers.formatCurrency(totalMonto));
+        setText('comprobante-monto-total', window.Helpers.formatCurrency(totalMonto));
     }
 
     function renderTabla() {
@@ -87,25 +106,25 @@ window.Modules.comprobante = (function () {
         if (!tabla) return;
 
         if (!comprobantesFiltrados.length) {
-            tabla.innerHTML = `<tr><td colspan="8">No hay comprobantes para mostrar</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="8">No hay comprobantes para mostrar</td></tr>';
             return;
         }
 
         tabla.innerHTML = comprobantesFiltrados.map((item) => `
             <tr>
-                <td>${item.MatriculaID}</td>
-                <td>${escapeHtml(item.ComprobanteMatricula || '')}</td>
-                <td>${escapeHtml(item.NombreEstudiante || '')}</td>
+                <td>${escapeHtml(item.MatriculaID)}</td>
+                <td>${escapeHtml(item.ComprobanteMatricula || item.Comprobante || '')}</td>
+                <td>${escapeHtml(item.NombreEstudiante || item.Estudiante || '')}</td>
                 <td>${escapeHtml(item.NombrePeriodo || '')}</td>
-                <td>${item.CreditosTotales ?? 0}</td>
-                <td>${Helpers.formatCurrency(item.CostoTotal || 0)}</td>
+                <td>${escapeHtml(item.CreditosTotales ?? item.Creditos ?? 0)}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.CostoTotal || item.MontoTotal || 0))}</td>
                 <td>
-                    <span class="badge ${getBadgeEstado(item.EstadoMatricula)}">
-                        ${escapeHtml(item.EstadoMatricula || 'N/D')}
+                    <span class="badge ${getBadgeEstado(item.EstadoMatricula || item.Estado)}">
+                        ${escapeHtml(item.EstadoMatricula || item.Estado || 'N/D')}
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-outline" onclick="Modules.comprobante.verDetalle(${item.MatriculaID})">
+                    <button class="btn btn-outline" onclick="window.Modules.comprobante.verDetalle(${item.MatriculaID})">
                         Ver
                     </button>
                 </td>
@@ -115,14 +134,14 @@ window.Modules.comprobante = (function () {
 
     async function verDetalle(matriculaId) {
         try {
-            const response = await ApiService.obtenerComprobantePorMatriculaId(matriculaId);
+            const response = await window.ApiService.obtenerComprobantePorMatriculaId(matriculaId);
             const data = response.data || {};
 
             const encabezado = data.encabezado || {};
             const detalle = Array.isArray(data.detalle) ? normalizarDetalle(data.detalle) : [];
 
-            UI.openModal({
-                title: `Comprobante ${escapeHtml(encabezado.ComprobanteMatricula || '')}`,
+            window.UI.openModal({
+                title: `Comprobante ${escapeHtml(encabezado.ComprobanteMatricula || encabezado.Comprobante || '')}`,
                 body: `
                     <div class="resumen-financiero">
                         <div class="mini-card">
@@ -131,21 +150,21 @@ window.Modules.comprobante = (function () {
                         </div>
                         <div class="mini-card">
                             <div class="mini-card-label">Créditos</div>
-                            <div class="mini-card-value">${encabezado.CreditosTotales || 0}</div>
+                            <div class="mini-card-value">${encabezado.CreditosTotales || encabezado.Creditos || 0}</div>
                         </div>
                         <div class="mini-card">
                             <div class="mini-card-label">Costo total</div>
-                            <div class="mini-card-value">${Helpers.formatCurrency(encabezado.CostoTotal || 0)}</div>
+                            <div class="mini-card-value">${window.Helpers.formatCurrency(encabezado.CostoTotal || encabezado.MontoTotal || 0)}</div>
                         </div>
                     </div>
 
                     <div class="mt-2">
-                        <p><strong>Estudiante:</strong> ${escapeHtml(encabezado.NombreEstudiante || '')}</p>
+                        <p><strong>Estudiante:</strong> ${escapeHtml(encabezado.NombreEstudiante || encabezado.Estudiante || '')}</p>
                         <p><strong>Carnet:</strong> ${escapeHtml(encabezado.Carnet || '')}</p>
                         <p><strong>Correo:</strong> ${escapeHtml(encabezado.CorreoInstitucional || '')}</p>
                         <p><strong>Período:</strong> ${escapeHtml(encabezado.NombrePeriodo || '')} ${escapeHtml(encabezado.TipoPeriodo || '')} ${encabezado.Anio ? `(${encabezado.Anio})` : ''}</p>
                         <p><strong>Fecha matrícula:</strong> ${formatearFecha(encabezado.FechaMatricula)}</p>
-                        <p><strong>Estado matrícula:</strong> ${escapeHtml(encabezado.EstadoMatricula || '')}</p>
+                        <p><strong>Estado matrícula:</strong> ${escapeHtml(encabezado.EstadoMatricula || encabezado.Estado || '')}</p>
                         <p><strong>Factura:</strong> ${escapeHtml(encabezado.NumeroFactura || 'N/D')}</p>
                         <p><strong>Estado factura:</strong> ${escapeHtml(encabezado.EstadoFactura || 'N/D')}</p>
                         <p><strong>Estado cuenta:</strong> ${escapeHtml(encabezado.EstadoCuenta || 'N/D')}</p>
@@ -178,7 +197,7 @@ window.Modules.comprobante = (function () {
                                                     <tr>
                                                         <td>${escapeHtml(String(item.NumeroSeccion || item.SeccionID || ''))}</td>
                                                         <td>${escapeHtml(item.CodigoCurso || '')} - ${escapeHtml(item.NombreCurso || '')}</td>
-                                                        <td>${item.Creditos || 0}</td>
+                                                        <td>${escapeHtml(item.Creditos || 0)}</td>
                                                         <td>${escapeHtml(item.HorariosTexto || 'N/D')}</td>
                                                         <td>${escapeHtml(item.AulasTexto || 'N/D')}</td>
                                                         <td>${escapeHtml(item.EstadoDetalle || 'N/D')}</td>
@@ -188,7 +207,7 @@ window.Modules.comprobante = (function () {
                                         </table>
                                     </div>
                                 `
-                                : `<p class="text-sm text-muted">No hay detalle de cursos disponible.</p>`
+                                : '<p class="text-sm text-muted">No hay detalle de cursos disponible.</p>'
                         }
                     </div>
                 `,
@@ -196,7 +215,11 @@ window.Modules.comprobante = (function () {
             });
         } catch (error) {
             console.error('Error obteniendo detalle de comprobante:', error);
-            UI.showMessage('comprobante-message', 'danger', error.message || 'No se pudo obtener el detalle del comprobante.');
+            window.UI.showMessage(
+                'comprobante-message',
+                'danger',
+                error.message || 'No se pudo obtener el detalle del comprobante.'
+            );
         }
     }
 
@@ -211,7 +234,7 @@ window.Modules.comprobante = (function () {
                 mapa.set(id, {
                     SeccionID: id,
                     NumeroSeccion: item.NumeroSeccion ?? '',
-                    EstadoDetalle: item.EstadoDetalle ?? '',
+                    EstadoDetalle: item.EstadoDetalle ?? item.Estado ?? '',
                     CodigoCurso: item.CodigoCurso ?? '',
                     NombreCurso: item.NombreCurso ?? '',
                     Creditos: Number(item.Creditos ?? 0),
@@ -235,8 +258,8 @@ window.Modules.comprobante = (function () {
 
         return Array.from(mapa.values()).map((item) => ({
             ...item,
-            HorariosTexto: item.horarios.join(' | '),
-            AulasTexto: item.aulas.join(' | ')
+            HorariosTexto: item.horarios.join(' | ') || 'N/D',
+            AulasTexto: item.aulas.join(' | ') || 'N/D'
         }));
     }
 
@@ -259,17 +282,18 @@ window.Modules.comprobante = (function () {
     }
 
     function formatearHora(valor) {
-        const texto = String(valor);
+        const texto = String(valor || '');
         return texto.length >= 5 ? texto.slice(0, 5) : texto;
     }
 
     function getBadgeEstado(estado) {
-        switch (estado) {
-            case 'Confirmada':
+        switch (String(estado || '').trim().toLowerCase()) {
+            case 'confirmada':
                 return 'badge-success';
-            case 'Pendiente':
+            case 'pendiente':
                 return 'badge-warning';
-            case 'Anulada':
+            case 'anulada':
+            case 'cancelada':
                 return 'badge-danger';
             default:
                 return 'badge-gray';
@@ -286,7 +310,7 @@ window.Modules.comprobante = (function () {
     function formatearFecha(valor) {
         if (!valor) return 'N/D';
         const fecha = new Date(valor);
-        return Number.isNaN(fecha.getTime()) ? 'N/D' : fecha.toLocaleString();
+        return Number.isNaN(fecha.getTime()) ? 'N/D' : fecha.toLocaleString('es-CR');
     }
 
     function escapeHtml(texto) {

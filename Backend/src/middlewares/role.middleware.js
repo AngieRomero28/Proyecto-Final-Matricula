@@ -4,6 +4,39 @@ const crearError = (mensaje, statusCode = 403) => {
     return error;
 };
 
+const normalizarRol = (rol) => {
+    const value = String(rol || '').trim().toLowerCase();
+
+    const map = {
+        'administrador ti': 'admin',
+        administrador: 'admin',
+        admin: 'admin',
+
+        'registro académico': 'registro',
+        'registro academico': 'registro',
+        registro: 'registro',
+
+        'tesorería': 'tesoreria',
+        tesoreria: 'tesoreria',
+
+        docente: 'docente',
+        estudiante: 'estudiante',
+
+        'auditor institucional': 'auditor',
+        auditor: 'auditor'
+    };
+
+    return map[value] || value || 'usuario';
+};
+
+const obtenerRolUsuario = (req) => {
+    return normalizarRol(
+        req.usuario?.Rol ??
+        req.usuario?.rol ??
+        ''
+    );
+};
+
 const permitirRoles = (...rolesPermitidos) => {
     return (req, res, next) => {
         try {
@@ -11,10 +44,8 @@ const permitirRoles = (...rolesPermitidos) => {
                 throw crearError('No autorizado. Debe autenticarse primero', 401);
             }
 
-            const rolUsuario = String(req.usuario.Rol || '').trim().toLowerCase();
-            const rolesNormalizados = rolesPermitidos.map((rol) =>
-                String(rol).trim().toLowerCase()
-            );
+            const rolUsuario = obtenerRolUsuario(req);
+            const rolesNormalizados = rolesPermitidos.map((rol) => normalizarRol(rol));
 
             if (!rolesNormalizados.includes(rolUsuario)) {
                 throw crearError('No tiene permisos para realizar esta acción', 403);
@@ -33,7 +64,7 @@ const soloEstudiante = (req, res, next) => {
             throw crearError('No autorizado. Debe autenticarse primero', 401);
         }
 
-        const rolUsuario = String(req.usuario.Rol || '').trim().toLowerCase();
+        const rolUsuario = obtenerRolUsuario(req);
 
         if (rolUsuario !== 'estudiante') {
             throw crearError('Esta acción es exclusiva para estudiantes', 403);
@@ -47,5 +78,7 @@ const soloEstudiante = (req, res, next) => {
 
 module.exports = {
     permitirRoles,
-    soloEstudiante
+    soloEstudiante,
+    normalizarRol,
+    obtenerRolUsuario
 };

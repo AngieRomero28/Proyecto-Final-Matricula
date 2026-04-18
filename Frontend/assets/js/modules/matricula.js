@@ -18,7 +18,8 @@ window.Modules.matricula = (function () {
         const btnConfirmar = document.getElementById('btn-confirmar-matricula');
         const listaSecciones = document.getElementById('lista-secciones');
 
-        if (selectPeriodo) {
+        if (selectPeriodo && !selectPeriodo.dataset.bound) {
+            selectPeriodo.dataset.bound = 'true';
             selectPeriodo.addEventListener('change', () => {
                 seleccionadas = [];
                 filtrarSecciones();
@@ -26,11 +27,13 @@ window.Modules.matricula = (function () {
             });
         }
 
-        if (btnConfirmar) {
+        if (btnConfirmar && !btnConfirmar.dataset.bound) {
+            btnConfirmar.dataset.bound = 'true';
             btnConfirmar.addEventListener('click', confirmarMatricula);
         }
 
-        if (listaSecciones) {
+        if (listaSecciones && !listaSecciones.dataset.bound) {
+            listaSecciones.dataset.bound = 'true';
             listaSecciones.addEventListener('click', (event) => {
                 const item = event.target.closest('[data-seccion-id]');
                 if (!item) return;
@@ -44,17 +47,26 @@ window.Modules.matricula = (function () {
     async function cargarDatos() {
         try {
             const [estRes, perRes, secRes] = await Promise.all([
-                ApiService.obtenerEstudiantes(),
-                ApiService.obtenerPeriodos(),
-                ApiService.obtenerSecciones()
+                window.ApiService.obtenerEstudiantes(),
+                window.ApiService.obtenerPeriodos(),
+                window.ApiService.obtenerSecciones()
             ]);
 
             estudiantes = Array.isArray(estRes.data) ? estRes.data : [];
             periodos = Array.isArray(perRes.data) ? perRes.data : [];
-            secciones = normalizarSecciones(Array.isArray(secRes.data) ? secRes.data : []);
+
+            const seccionesRaw = Array.isArray(secRes.data) ? secRes.data : [];
+            secciones = window.normalizarSecciones
+                ? window.normalizarSecciones(seccionesRaw).map((s) => ({
+                    ...s,
+                    Creditos: Number(s.Creditos ?? 0),
+                    PeriodoID: Number(s.PeriodoID ?? 0),
+                    Horarios: Array.isArray(s.horarios) ? s.horarios : []
+                }))
+                : normalizarSecciones(seccionesRaw);
         } catch (error) {
             console.error('Error cargando datos de matrícula:', error);
-            UI.showMessage(
+            window.UI.showMessage(
                 'matricula-message',
                 'danger',
                 error.message || 'No se pudieron cargar los datos de matrícula.'
@@ -84,7 +96,7 @@ window.Modules.matricula = (function () {
                     NombrePeriodo: item.NombrePeriodo ?? '',
                     TipoPeriodo: item.TipoPeriodo ?? '',
                     Anio: item.Anio ?? '',
-                    Docente: item.Docente ?? '',
+                    Docente: item.Docente || item.NombreDocente || '',
                     Horarios: []
                 });
             }
@@ -106,13 +118,13 @@ window.Modules.matricula = (function () {
         const fin = item.HoraFin ? formatearHora(item.HoraFin) : '';
 
         if (!dia && !inicio && !fin) return '';
-
         if (dia && inicio && fin) return `${dia} ${inicio} - ${fin}`;
+
         return [dia, inicio, fin].filter(Boolean).join(' ');
     }
 
     function formatearHora(valor) {
-        const texto = String(valor);
+        const texto = String(valor || '');
         return texto.length >= 5 ? texto.slice(0, 5) : texto;
     }
 
@@ -268,7 +280,7 @@ window.Modules.matricula = (function () {
     }
 
     async function confirmarMatricula() {
-        UI.clearMessage('matricula-message');
+        window.UI.clearMessage('matricula-message');
 
         const selectEstudiante = document.getElementById('select-estudiante');
         const selectPeriodo = document.getElementById('select-periodo');
@@ -277,31 +289,34 @@ window.Modules.matricula = (function () {
         const periodoId = Number(selectPeriodo?.value);
 
         if (!estudianteId) {
-            UI.showMessage('matricula-message', 'danger', 'Debe seleccionar un estudiante.');
+            window.UI.showMessage('matricula-message', 'danger', 'Debe seleccionar un estudiante.');
             return;
         }
 
         if (!periodoId) {
-            UI.showMessage('matricula-message', 'danger', 'Debe seleccionar un período.');
+            window.UI.showMessage('matricula-message', 'danger', 'Debe seleccionar un período.');
             return;
         }
 
         if (!seleccionadas.length) {
-            UI.showMessage('matricula-message', 'danger', 'Debe seleccionar al menos una sección.');
+            window.UI.showMessage('matricula-message', 'danger', 'Debe seleccionar al menos una sección.');
             return;
         }
 
         try {
-            const resultado = await ApiService.crearMatricula({
+            const resultado = await window.ApiService.crearMatricula({
                 estudianteId,
                 periodoId,
                 secciones: seleccionadas
             });
 
             const data = resultado?.data || resultado || {};
-            const numeroFactura = data.numeroFactura ? ` Factura generada: ${data.numeroFactura}.` : '';
+            const numeroFactura =
+                data.numeroFactura || data.NumeroFactura
+                    ? ` Factura generada: ${data.numeroFactura || data.NumeroFactura}.`
+                    : '';
 
-            UI.showMessage(
+            window.UI.showMessage(
                 'matricula-message',
                 'success',
                 `Matrícula realizada correctamente.${numeroFactura}`
@@ -313,7 +328,7 @@ window.Modules.matricula = (function () {
             renderResumen();
         } catch (error) {
             console.error('Error confirmando matrícula:', error);
-            UI.showMessage(
+            window.UI.showMessage(
                 'matricula-message',
                 'danger',
                 error.message || 'No se pudo realizar la matrícula.'

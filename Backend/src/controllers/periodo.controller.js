@@ -10,9 +10,8 @@ const obtenerPeriodos = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerPeriodos:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los periodos',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los periodos'
         });
     }
 };
@@ -21,13 +20,13 @@ const obtenerPeriodoPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id del periodo debe ser numérico'
             });
         }
 
-        const periodo = await periodoService.obtenerPeriodoPorId(id);
+        const periodo = await periodoService.obtenerPeriodoPorId(Number(id));
 
         if (!periodo) {
             return res.status(404).json({
@@ -41,9 +40,8 @@ const obtenerPeriodoPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerPeriodoPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el periodo',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el periodo'
         });
     }
 };

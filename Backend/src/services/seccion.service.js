@@ -14,6 +14,7 @@ const obtenerSecciones = async () => {
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso,
+            c.Creditos,
 
             p.PeriodoID,
             p.NombrePeriodo,
@@ -56,6 +57,11 @@ const obtenerSecciones = async () => {
 
 const obtenerSeccionPorId = async (id) => {
     const pool = await poolPromise;
+    const seccionId = Number(id);
+
+    if (Number.isNaN(seccionId) || seccionId <= 0) {
+        return [];
+    }
 
     const query = `
         SELECT
@@ -68,6 +74,7 @@ const obtenerSeccionPorId = async (id) => {
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso,
+            c.Creditos,
 
             p.PeriodoID,
             p.NombrePeriodo,
@@ -105,7 +112,7 @@ const obtenerSeccionPorId = async (id) => {
         ORDER BY s.SeccionID, h.DiaSemana, h.HoraInicio;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [seccionId]);
     return rows;
 };
 

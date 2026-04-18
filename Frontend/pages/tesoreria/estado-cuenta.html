@@ -1,0 +1,76 @@
+<div class="page-header">
+    <div>
+        <h1>Estado de Cuenta</h1>
+        <p>Consulta consolidada de saldos por factura y estudiante</p>
+    </div>
+</div>
+
+<div id="tesoreria-estado-cuenta-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Registros</div>
+        <div class="stat-value" id="tesoreria-ec-total">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Monto total</div>
+        <div class="stat-value" id="tesoreria-ec-monto-total">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Monto pagado</div>
+        <div class="stat-value" id="tesoreria-ec-monto-pagado">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Saldo pendiente</div>
+        <div class="stat-value" id="tesoreria-ec-saldo-pendiente">₡0.00</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <input type="text" id="filtro-tesoreria-ec-buscar" placeholder="Buscar por factura, estudiante o período...">
+
+        <select id="filtro-tesoreria-ec-estado">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Pagado">Pagado</option>
+            <option value="Parcial">Parcial</option>
+            <option value="Vencido">Vencido</option>
+        </select>
+
+        <button class="btn btn-outline" id="btn-filtrar-tesoreria-ec">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de estados de cuenta</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Factura</th>
+                    <th>Estudiante</th>
+                    <th>Período</th>
+                    <th>Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-tesoreria-estado-cuenta">
+                <tr>
+                    <td colspan="8">Cargando estados de cuenta...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

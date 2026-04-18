@@ -10,9 +10,8 @@ const obtenerNotificaciones = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerNotificaciones:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener las notificaciones',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener las notificaciones'
         });
     }
 };

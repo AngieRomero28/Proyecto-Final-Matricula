@@ -13,7 +13,7 @@ window.Router = {
         }
 
         dynamicContainer.classList.remove('hidden');
-        UI.setPageHeader(title, subtitle);
+        window.UI.setPageHeader(title, subtitle);
 
         const response = await fetch(pagePath, {
             cache: 'no-store',
@@ -33,88 +33,201 @@ window.Router = {
     },
 
     async initModule(pagePath) {
-        const fileName = pagePath.split('/').pop().replace('.html', '');
-        const moduleName = this.toCamelCase(fileName);
+        const meta = this.getModuleMeta(pagePath);
 
         try {
-            await this.ensureModuleLoaded(fileName, moduleName);
+            const hasScript = await this.ensureModuleLoaded(meta);
 
-            if (
-                window.Modules &&
-                window.Modules[moduleName] &&
-                typeof window.Modules[moduleName].init === 'function'
-            ) {
-                await window.Modules[moduleName].init();
-            } else {
-                throw new Error(`No existe o no está listo el módulo JS para la página "${moduleName}".`);
+            if (!hasScript) {
+                return;
             }
+
+            const moduleInstance = this.resolveModule(meta.keys);
+
+            if (moduleInstance && typeof moduleInstance.init === 'function') {
+                await moduleInstance.init();
+                return;
+            }
+
+            throw new Error(
+                `No existe o no está listo el módulo JS para la página "${meta.fileName}".`
+            );
         } catch (error) {
             console.error('No se pudo inicializar módulo:', error);
             throw error;
         }
     },
 
-    async ensureModuleLoaded(fileName, moduleName) {
+    async ensureModuleLoaded(meta) {
         window.Modules = window.Modules || {};
 
-        if (
-            window.Modules[moduleName] &&
-            typeof window.Modules[moduleName].init === 'function'
-        ) {
-            return;
+        const existingModule = this.resolveModule(meta.keys);
+        if (existingModule && typeof existingModule.init === 'function') {
+            return true;
         }
 
-        const scriptPath = `./assets/js/${fileName}.js`;
+        const existingScript = document.querySelector(
+            `script[data-module-path="${meta.scriptPath}"]`
+        );
 
-        const existingScript = document.querySelector(`script[data-module="${fileName}"]`);
         if (existingScript) {
-            await this.waitForModule(moduleName, 1500);
-            return;
+            await this.waitForModule(meta.keys, 2500);
+            return true;
+        }
+
+        const scriptExists = await this.scriptExists(meta.scriptPath);
+        if (!scriptExists) {
+            console.warn(`No existe script para la página ${meta.pagePath}: ${meta.scriptPath}`);
+            return false;
         }
 
         await new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = scriptPath;
+            script.src = meta.scriptPath;
             script.async = false;
             script.defer = false;
-            script.dataset.module = fileName;
+            script.dataset.module = meta.fileName;
+            script.dataset.modulePath = meta.scriptPath;
 
             script.onload = () => resolve();
-            script.onerror = () => reject(new Error(`No se pudo cargar el script del módulo: ${scriptPath}`));
+            script.onerror = () =>
+                reject(new Error(`No se pudo cargar el script del módulo: ${meta.scriptPath}`));
 
             document.body.appendChild(script);
         });
 
-        await this.waitForModule(moduleName, 1500);
+        await this.waitForModule(meta.keys, 2500);
+        return true;
     },
 
-    async waitForModule(moduleName, timeout = 1500) {
+    async scriptExists(scriptPath) {
+        try {
+            const response = await fetch(scriptPath, {
+                method: 'HEAD',
+                cache: 'no-store'
+            });
+
+            return response.ok;
+        } catch (error) {
+            console.warn(`No se pudo verificar existencia del script ${scriptPath}:`, error.message);
+            return false;
+        }
+    },
+
+    resolveModule(keys = []) {
+        if (!window.Modules) return null;
+
+        for (const key of keys) {
+            const mod = window.Modules[key];
+            if (mod && typeof mod.init === 'function') {
+                return mod;
+            }
+        }
+
+        return null;
+    },
+
+    getModuleMeta(pagePath) {
+        const normalized = String(pagePath || '').replace(/\\/g, '/');
+        const fileName = this.getFileName(normalized);
+        const folder = this.getFolderName(normalized);
+
+        const scriptPath = this.resolveScriptPath(normalized, fileName, folder);
+        const keys = this.buildModuleKeys(folder, fileName);
+
+        return {
+            pagePath: normalized,
+            fileName,
+            folder,
+            scriptPath,
+            keys
+        };
+    },
+
+    resolveScriptPath(normalizedPagePath, fileName, folder) {
+        const folderMap = {
+            estudiante: 'estudiante',
+            docente: 'docente',
+            tesoreria: 'tesoreria',
+            auditor: 'auditor',
+            admin: 'admin',
+            registro: 'registro',
+            common: 'common',
+            modules: 'modules'
+        };
+
+        const targetFolder = folderMap[folder] || folder || 'common';
+        return `./assets/js/${targetFolder}/${fileName}.js`;
+    },
+
+    buildModuleKeys(folder, fileName) {
+        const camelFile = this.toCamelCase(fileName);
+        const camelFolder = this.toCamelCase(folder || '');
+
+        const keys = [];
+
+        if (camelFolder) {
+            keys.push(`${camelFolder}${this.capitalize(camelFile)}`);
+        }
+
+        keys.push(camelFile);
+
+        return [...new Set(keys)];
+    },
+
+    async waitForModule(keys, timeout = 2500) {
         const start = Date.now();
 
         while (Date.now() - start < timeout) {
-            if (
-                window.Modules &&
-                window.Modules[moduleName] &&
-                typeof window.Modules[moduleName].init === 'function'
-            ) {
+            const moduleInstance = this.resolveModule(keys);
+
+            if (moduleInstance && typeof moduleInstance.init === 'function') {
                 return;
             }
 
             await new Promise((resolve) => setTimeout(resolve, 50));
         }
 
-        throw new Error(`El módulo "${moduleName}" no quedó registrado en window.Modules.`);
+        throw new Error(
+            `El módulo no quedó registrado. Se esperaba alguna de estas claves: ${keys.join(', ')}`
+        );
+    },
+
+    getFileName(pagePath) {
+        return String(pagePath || '')
+            .split('/')
+            .pop()
+            .replace('.html', '');
+    },
+
+    getFolderName(pagePath) {
+        const parts = String(pagePath || '')
+            .split('/')
+            .filter(Boolean);
+
+        const pagesIndex = parts.indexOf('pages');
+        if (pagesIndex === -1) {
+            return 'common';
+        }
+
+        return parts[pagesIndex + 1] || 'common';
     },
 
     toCamelCase(text) {
-        return text
+        return String(text || '')
             .split('-')
+            .filter(Boolean)
             .map((word, index) =>
                 index === 0
                     ? word
                     : word.charAt(0).toUpperCase() + word.slice(1)
             )
             .join('');
+    },
+
+    capitalize(text) {
+        const value = String(text || '');
+        return value ? value.charAt(0).toUpperCase() + value.slice(1) : '';
     },
 
     showDashboard() {
@@ -130,6 +243,6 @@ window.Router = {
             dashboard.classList.remove('hidden');
         }
 
-        UI.setPageHeader('Dashboard', 'Resumen general del sistema');
+        window.UI.setPageHeader('Dashboard', 'Resumen general del sistema');
     }
 };

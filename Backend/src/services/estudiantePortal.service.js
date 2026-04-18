@@ -10,7 +10,7 @@ const crearError = (mensaje, statusCode = 400) => {
 const validarEstudiante = async (executor, estudianteId) => {
     const estudianteIdNum = Number(estudianteId);
 
-    if (Number.isNaN(estudianteIdNum)) {
+    if (Number.isNaN(estudianteIdNum) || estudianteIdNum <= 0) {
         throw crearError('El estudianteId debe ser numérico');
     }
 
@@ -99,17 +99,28 @@ const obtenerResumenEstudiante = async (estudianteId) => {
 };
 
 const obtenerOfertaDisponible = async (estudianteId, periodoId) => {
-    await validarEstudiante(await poolPromise, estudianteId);
-    return matriculaService.obtenerOfertaMatriculablePorEstudiante(estudianteId, periodoId);
-};
-
-const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
     const pool = await poolPromise;
     await validarEstudiante(pool, estudianteId);
 
     const periodoIdNum = Number(periodoId);
 
-    if (Number.isNaN(periodoIdNum)) {
+    if (Number.isNaN(periodoIdNum) || periodoIdNum <= 0) {
+        throw crearError('El periodoId debe ser numérico');
+    }
+
+    return matriculaService.obtenerOfertaMatriculablePorEstudiante(
+        Number(estudianteId),
+        periodoIdNum
+    );
+};
+
+const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
+    const pool = await poolPromise;
+    const estudiante = await validarEstudiante(pool, estudianteId);
+
+    const periodoIdNum = Number(periodoId);
+
+    if (Number.isNaN(periodoIdNum) || periodoIdNum <= 0) {
         throw crearError('El periodoId debe ser numérico');
     }
 
@@ -163,7 +174,7 @@ const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
               AND ms.EstadoDetalle = 'Activa'
             ORDER BY c.NombreCurso, h.DiaSemana, h.HoraInicio;
         `,
-        [estudianteId, periodoIdNum]
+        [estudiante.EstudianteID, periodoIdNum]
     );
 
     return rows;
@@ -171,7 +182,7 @@ const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
 
 const obtenerHistorialAcademico = async (estudianteId) => {
     const pool = await poolPromise;
-    await validarEstudiante(pool, estudianteId);
+    const estudiante = await validarEstudiante(pool, estudianteId);
 
     const [rows] = await pool.query(
         `
@@ -192,7 +203,7 @@ const obtenerHistorialAcademico = async (estudianteId) => {
             WHERE ha.EstudianteID = ?
             ORDER BY ha.Anio DESC, ha.HistorialAcademicoID DESC;
         `,
-        [estudianteId]
+        [estudiante.EstudianteID]
     );
 
     return rows;
@@ -200,7 +211,7 @@ const obtenerHistorialAcademico = async (estudianteId) => {
 
 const obtenerHistorialFinanciero = async (estudianteId) => {
     const pool = await poolPromise;
-    await validarEstudiante(pool, estudianteId);
+    const estudiante = await validarEstudiante(pool, estudianteId);
 
     const [rows] = await pool.query(
         `
@@ -208,6 +219,8 @@ const obtenerHistorialFinanciero = async (estudianteId) => {
                 f.FacturaID,
                 f.NumeroFactura,
                 f.FechaFactura,
+                f.Subtotal,
+                f.Descuento,
                 f.Total,
                 f.EstadoFactura,
 
@@ -230,7 +243,7 @@ const obtenerHistorialFinanciero = async (estudianteId) => {
             WHERE f.EstudianteID = ?
             ORDER BY p.Anio DESC, f.FacturaID DESC;
         `,
-        [estudianteId]
+        [estudiante.EstudianteID]
     );
 
     return rows;
@@ -238,7 +251,7 @@ const obtenerHistorialFinanciero = async (estudianteId) => {
 
 const obtenerPagosEstudiante = async (estudianteId) => {
     const pool = await poolPromise;
-    await validarEstudiante(pool, estudianteId);
+    const estudiante = await validarEstudiante(pool, estudianteId);
 
     const [rows] = await pool.query(
         `
@@ -266,7 +279,7 @@ const obtenerPagosEstudiante = async (estudianteId) => {
             WHERE pg.EstudianteID = ?
             ORDER BY pg.FechaPago DESC, pg.PagoID DESC;
         `,
-        [estudianteId]
+        [estudiante.EstudianteID]
     );
 
     return rows;

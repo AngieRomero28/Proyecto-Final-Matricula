@@ -21,8 +21,8 @@ const obtenerPagos = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
-            0.00 AS Subtotal,
-            0.00 AS Descuento,
+            f.Subtotal,
+            f.Descuento,
             f.Total AS TotalFactura,
             f.EstadoFactura,
 
@@ -34,7 +34,7 @@ const obtenerPagos = async () => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            NULL AS ComprobanteMatricula,
+            m.ComprobanteMatricula,
 
             e.EstudianteID,
             e.Carnet,
@@ -70,6 +70,11 @@ const obtenerPagos = async () => {
 
 const obtenerPagoPorId = async (id) => {
     const pool = await poolPromise;
+    const pagoId = Number(id);
+
+    if (Number.isNaN(pagoId) || pagoId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -82,8 +87,8 @@ const obtenerPagoPorId = async (id) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            0.00 AS Subtotal,
-            0.00 AS Descuento,
+            f.Subtotal,
+            f.Descuento,
             f.Total AS TotalFactura,
             f.EstadoFactura,
 
@@ -95,7 +100,7 @@ const obtenerPagoPorId = async (id) => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            NULL AS ComprobanteMatricula,
+            m.ComprobanteMatricula,
 
             e.EstudianteID,
             e.Carnet,
@@ -125,7 +130,7 @@ const obtenerPagoPorId = async (id) => {
         WHERE p.PagoID = ?;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [pagoId]);
     return rows[0] || null;
 };
 
@@ -137,7 +142,7 @@ const registrarPago = async (data) => {
         montoPago,
         metodoPago,
         referenciaPago
-    } = data;
+    } = data || {};
 
     if (
         !facturaId ||
@@ -152,26 +157,26 @@ const registrarPago = async (data) => {
         );
     }
 
-    if (
-        Number.isNaN(Number(facturaId)) ||
-        Number.isNaN(Number(estudianteId)) ||
-        Number.isNaN(Number(periodoId))
-    ) {
-        throw crearErrorValidacion('facturaId, estudianteId y periodoId deben ser numéricos');
-    }
-
     const facturaIdNum = Number(facturaId);
     const estudianteIdNum = Number(estudianteId);
     const periodoIdNum = Number(periodoId);
     const monto = Number(montoPago);
-    const metodoPagoTexto = String(metodoPago).trim();
+    const metodoPagoTexto = String(metodoPago || '').trim();
     const referenciaPagoTexto = referenciaPago ? String(referenciaPago).trim() : null;
+
+    if (
+        Number.isNaN(facturaIdNum) || facturaIdNum <= 0 ||
+        Number.isNaN(estudianteIdNum) || estudianteIdNum <= 0 ||
+        Number.isNaN(periodoIdNum) || periodoIdNum <= 0
+    ) {
+        throw crearErrorValidacion('facturaId, estudianteId y periodoId deben ser numéricos');
+    }
 
     if (Number.isNaN(monto) || monto <= 0) {
         throw crearErrorValidacion('El montoPago debe ser un número mayor que 0');
     }
 
-    if (metodoPagoTexto === '') {
+    if (!metodoPagoTexto) {
         throw crearErrorValidacion('El metodoPago es obligatorio');
     }
 
@@ -379,7 +384,11 @@ const registrarPago = async (data) => {
             estadoPago: 'Exitoso'
         };
     } catch (error) {
-        await connection.rollback();
+        try {
+            await connection.rollback();
+        } catch (rollbackError) {
+            console.error('Error al hacer rollback en registrarPago:', rollbackError.message);
+        }
         throw error;
     } finally {
         connection.release();

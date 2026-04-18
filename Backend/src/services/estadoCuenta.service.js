@@ -16,8 +16,8 @@ const obtenerEstadosCuenta = async () => {
             f.FacturaID,
             f.NumeroFactura,
             f.FechaFactura AS FechaEmision,
-            0.00 AS Subtotal,
-            0.00 AS Descuento,
+            f.Subtotal,
+            f.Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -35,7 +35,7 @@ const obtenerEstadosCuenta = async () => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            NULL AS ComprobanteMatricula
+            m.ComprobanteMatricula
         FROM Estado_Cuenta ec
         INNER JOIN Factura f
             ON ec.FacturaID = f.FacturaID
@@ -56,6 +56,11 @@ const obtenerEstadosCuenta = async () => {
 
 const obtenerEstadoCuentaPorId = async (id) => {
     const pool = await poolPromise;
+    const estadoCuentaId = Number(id);
+
+    if (Number.isNaN(estadoCuentaId) || estadoCuentaId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -70,8 +75,8 @@ const obtenerEstadoCuentaPorId = async (id) => {
             f.FacturaID,
             f.NumeroFactura,
             f.FechaFactura AS FechaEmision,
-            0.00 AS Subtotal,
-            0.00 AS Descuento,
+            f.Subtotal,
+            f.Descuento,
             f.Total,
             f.EstadoFactura,
 
@@ -89,7 +94,7 @@ const obtenerEstadoCuentaPorId = async (id) => {
 
             m.MatriculaID,
             m.EstadoMatricula,
-            NULL AS ComprobanteMatricula
+            m.ComprobanteMatricula
         FROM Estado_Cuenta ec
         INNER JOIN Factura f
             ON ec.FacturaID = f.FacturaID
@@ -104,7 +109,7 @@ const obtenerEstadoCuentaPorId = async (id) => {
         WHERE ec.EstadoCuentaID = ?;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [estadoCuentaId]);
     return rows[0] || null;
 };
 

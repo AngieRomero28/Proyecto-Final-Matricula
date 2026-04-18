@@ -1,0 +1,44 @@
+<div class="page-header">
+    <div>
+        <h1>Estudiantes por Curso</h1>
+        <p>Consulta de estudiantes matriculados en sus secciones</p>
+    </div>
+</div>
+
+<div id="docente-estudiantes-message"></div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <select id="select-docente-seccion">
+            <option value="">Seleccione una sección</option>
+        </select>
+
+        <button class="btn btn-primary" id="btn-cargar-estudiantes-curso">
+            Cargar estudiantes
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Estudiantes matriculados</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Carnet</th>
+                    <th>Nombre</th>
+                    <th>Correo</th>
+                    <th>Estado académico</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-docente-estudiantes">
+                <tr>
+                    <td colspan="4">Seleccione una sección para ver estudiantes.</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

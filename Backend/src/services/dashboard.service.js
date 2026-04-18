@@ -31,7 +31,7 @@ const obtenerResumenDashboard = async () => {
             (
                 SELECT COUNT(*)
                 FROM Factura
-                WHERE EstadoFactura = 'Pendiente'
+                WHERE EstadoFactura IN ('Pendiente', 'Parcial')
             ) AS FacturasPendientes,
 
             (

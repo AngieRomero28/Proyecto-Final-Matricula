@@ -10,9 +10,8 @@ const obtenerEstudiantes = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerEstudiantes:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los estudiantes',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los estudiantes'
         });
     }
 };
@@ -21,13 +20,13 @@ const obtenerEstudiantePorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id del estudiante debe ser numérico'
             });
         }
 
-        const estudiante = await estudianteService.obtenerEstudiantePorId(id);
+        const estudiante = await estudianteService.obtenerEstudiantePorId(Number(id));
 
         if (!estudiante) {
             return res.status(404).json({
@@ -41,9 +40,8 @@ const obtenerEstudiantePorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerEstudiantePorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el estudiante',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el estudiante'
         });
     }
 };

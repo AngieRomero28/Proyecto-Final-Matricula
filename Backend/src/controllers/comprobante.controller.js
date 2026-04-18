@@ -10,9 +10,8 @@ const obtenerComprobantes = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerComprobantes:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los comprobantes',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los comprobantes'
         });
     }
 };
@@ -21,7 +20,7 @@ const obtenerComprobantePorMatriculaId = async (req, res) => {
     try {
         const { matriculaId } = req.params;
 
-        if (!matriculaId || isNaN(matriculaId)) {
+        if (!matriculaId || Number.isNaN(Number(matriculaId))) {
             return res.status(400).json({
                 mensaje: 'El id de la matrícula debe ser numérico'
             });
@@ -41,9 +40,8 @@ const obtenerComprobantePorMatriculaId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerComprobantePorMatriculaId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el comprobante',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el comprobante'
         });
     }
 };

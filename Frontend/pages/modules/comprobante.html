@@ -1,0 +1,49 @@
+<div class="page-header">
+    <div>
+        <h1>Comprobantes de Matrícula</h1>
+        <p>Consulta de comprobantes generados</p>
+    </div>
+</div>
+
+<div id="comprobante-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Buscar Comprobante</h3>
+    </div>
+
+    <div class="filters-row">
+        <input type="text" id="filtro-comprobante-estudiante" placeholder="Nombre estudiante...">
+        <input type="text" id="filtro-comprobante-factura" placeholder="Número factura...">
+
+        <button class="btn btn-outline" id="btn-filtrar-comprobante">
+            Buscar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de Comprobantes</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Estudiante</th>
+                    <th>Factura</th>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-comprobantes">
+                <tr>
+                    <td colspan="6">Cargando comprobantes...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -12,7 +12,15 @@ window.StorageManager = {
         localStorage.removeItem(key);
     },
 
+    has(key) {
+        return localStorage.getItem(key) !== null;
+    },
+
     clearSession() {
-        localStorage.removeItem('smu_session');
+        localStorage.removeItem(window.APP_CONFIG?.STORAGE_KEYS?.SESSION || 'smu_session');
+    },
+
+    clearAll() {
+        localStorage.clear();
     }
 };

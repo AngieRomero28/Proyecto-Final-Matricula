@@ -12,8 +12,16 @@ const obtenerResumenReportes = async () => {
             (SELECT COUNT(*) FROM Matricula) AS TotalMatriculas,
             (SELECT COUNT(*) FROM Pago) AS TotalPagos,
             (SELECT COUNT(*) FROM Factura) AS TotalFacturas,
-            (SELECT IFNULL(SUM(MontoPago), 0) FROM Pago WHERE EstadoPago IN ('Aplicado', 'Exitoso')) AS TotalRecaudado,
-            (SELECT IFNULL(SUM(SaldoPendiente), 0) FROM Estado_Cuenta) AS SaldoPendienteTotal;
+            (
+                SELECT IFNULL(SUM(MontoPago), 0)
+                FROM Pago
+                WHERE EstadoPago IN ('Aplicado', 'Exitoso')
+            ) AS TotalRecaudado,
+            (
+                SELECT IFNULL(SUM(SaldoPendiente), 0)
+                FROM Estado_Cuenta
+                WHERE SaldoPendiente > 0
+            ) AS SaldoPendienteTotal;
     `;
 
     const matriculasPorPeriodoQuery = `

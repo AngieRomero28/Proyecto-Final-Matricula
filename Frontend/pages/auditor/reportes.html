@@ -1,0 +1,50 @@
+<div class="page-header">
+    <div>
+        <h1>Reportes de Auditoría</h1>
+        <p>Resumen de información académica y financiera para revisión institucional</p>
+    </div>
+</div>
+
+<div id="auditor-reportes-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Seleccionar reporte</h3>
+    </div>
+
+    <div class="filters-row">
+        <select id="select-auditor-reporte">
+            <option value="">Seleccione un reporte</option>
+            <option value="resumen">Resumen general</option>
+            <option value="matriculas">Matrículas</option>
+            <option value="pagos">Pagos</option>
+            <option value="facturas">Facturas</option>
+            <option value="estado-cuenta">Estado de cuenta</option>
+        </select>
+
+        <button class="btn btn-primary" id="btn-generar-auditor-reporte">
+            Generar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Resultado del reporte</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead id="tabla-auditor-reportes-head">
+                <tr>
+                    <th>Seleccione un reporte</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-auditor-reportes-body">
+                <tr>
+                    <td>No hay datos aún</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

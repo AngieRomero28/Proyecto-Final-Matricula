@@ -1,0 +1,75 @@
+<div class="page-header">
+    <div>
+        <h1>Estado de Cuenta</h1>
+        <p>Resumen financiero por estudiante</p>
+    </div>
+</div>
+
+<div id="estado-cuenta-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Registros</div>
+        <div class="stat-value" id="estado-cuenta-total">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Monto Total</div>
+        <div class="stat-value" id="estado-cuenta-monto-total">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Pagado</div>
+        <div class="stat-value" id="estado-cuenta-monto-pagado">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Pendiente</div>
+        <div class="stat-value" id="estado-cuenta-saldo-pendiente">₡0.00</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <input type="text" id="filtro-estado-cuenta-buscar" placeholder="Buscar...">
+
+        <select id="filtro-estado-cuenta-estado">
+            <option value="">Todos</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Pagado">Pagado</option>
+        </select>
+
+        <button class="btn btn-outline" id="btn-filtrar-estado-cuenta">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Detalle</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Factura</th>
+                    <th>Estudiante</th>
+                    <th>Período</th>
+                    <th>Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-estado-cuenta">
+                <tr>
+                    <td colspan="9">Cargando datos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

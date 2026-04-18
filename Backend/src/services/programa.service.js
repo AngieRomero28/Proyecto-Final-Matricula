@@ -25,6 +25,11 @@ const obtenerProgramas = async () => {
 
 const obtenerProgramaPorId = async (id) => {
     const pool = await poolPromise;
+    const programaId = Number(id);
+
+    if (Number.isNaN(programaId) || programaId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -42,7 +47,7 @@ const obtenerProgramaPorId = async (id) => {
             pa.NombrePrograma;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [programaId]);
     return rows[0] || null;
 };
 

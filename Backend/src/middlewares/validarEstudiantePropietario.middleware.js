@@ -8,13 +8,13 @@ const crearError = (mensaje, statusCode = 403) => {
 
 const validarEstudiantePropietario = async (req, res, next) => {
     try {
-        if (!req.usuario) {
+        if (!req.usuario || !req.usuario.UsuarioID) {
             throw crearError('No autorizado. Debe autenticarse primero', 401);
         }
 
         const estudianteId = Number(req.params.estudianteId);
 
-        if (Number.isNaN(estudianteId)) {
+        if (Number.isNaN(estudianteId) || estudianteId <= 0) {
             throw crearError('El estudianteId debe ser numérico', 400);
         }
 
@@ -39,7 +39,10 @@ const validarEstudiantePropietario = async (req, res, next) => {
         const estudiante = rows[0];
 
         if (Number(estudiante.UsuarioID) !== Number(req.usuario.UsuarioID)) {
-            throw crearError('No tiene permiso para acceder a la información de otro estudiante', 403);
+            throw crearError(
+                'No tiene permiso para acceder a la información de otro estudiante',
+                403
+            );
         }
 
         req.estudiante = estudiante;

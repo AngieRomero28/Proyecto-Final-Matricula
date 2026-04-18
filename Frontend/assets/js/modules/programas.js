@@ -14,15 +14,18 @@ window.Modules.programas = (function () {
         const inputBuscar = document.getElementById('filtro-programa-buscar');
         const btnNuevo = document.getElementById('btn-nuevo-programa');
 
-        if (btnFiltrar) {
+        if (btnFiltrar && !btnFiltrar.dataset.bound) {
+            btnFiltrar.dataset.bound = 'true';
             btnFiltrar.addEventListener('click', aplicarFiltros);
         }
 
-        if (inputBuscar) {
+        if (inputBuscar && !inputBuscar.dataset.bound) {
+            inputBuscar.dataset.bound = 'true';
             inputBuscar.addEventListener('input', aplicarFiltros);
         }
 
-        if (btnNuevo) {
+        if (btnNuevo && !btnNuevo.dataset.bound) {
+            btnNuevo.dataset.bound = 'true';
             btnNuevo.addEventListener('click', mostrarAvisoNuevoPrograma);
         }
     }
@@ -32,10 +35,10 @@ window.Modules.programas = (function () {
 
         try {
             if (tabla) {
-                tabla.innerHTML = `<tr><td colspan="5">Cargando programas...</td></tr>`;
+                tabla.innerHTML = '<tr><td colspan="5">Cargando programas...</td></tr>';
             }
 
-            const response = await ApiService.obtenerProgramas();
+            const response = await window.ApiService.obtenerProgramas();
             programas = Array.isArray(response.data) ? response.data : [];
             programasFiltrados = [...programas];
 
@@ -44,20 +47,26 @@ window.Modules.programas = (function () {
         } catch (error) {
             console.error('Error cargando programas:', error);
             if (tabla) {
-                tabla.innerHTML = `<tr><td colspan="5">Error cargando programas</td></tr>`;
+                tabla.innerHTML = '<tr><td colspan="5">Error cargando programas</td></tr>';
             }
-            UI.showMessage('programas-message', 'danger', error.message || 'No se pudieron cargar los programas.');
+            window.UI.showMessage(
+                'programas-message',
+                'danger',
+                error.message || 'No se pudieron cargar los programas.'
+            );
         }
     }
 
     function aplicarFiltros() {
-        const texto = String(document.getElementById('filtro-programa-buscar')?.value || '').trim().toLowerCase();
+        const texto = String(document.getElementById('filtro-programa-buscar')?.value || '')
+            .trim()
+            .toLowerCase();
 
         programasFiltrados = programas.filter((programa) => {
             return (
                 !texto ||
-                String(programa.CodigoPrograma || '').toLowerCase().includes(texto) ||
-                String(programa.NombrePrograma || '').toLowerCase().includes(texto)
+                String(programa.CodigoPrograma || programa.Codigo || '').toLowerCase().includes(texto) ||
+                String(programa.NombrePrograma || programa.Nombre || '').toLowerCase().includes(texto)
             );
         });
 
@@ -67,7 +76,10 @@ window.Modules.programas = (function () {
 
     function renderResumen() {
         const total = programasFiltrados.length;
-        const totalEstudiantes = programasFiltrados.reduce((acc, item) => acc + Number(item.TotalEstudiantes || 0), 0);
+        const totalEstudiantes = programasFiltrados.reduce(
+            (acc, item) => acc + Number(item.TotalEstudiantes || 0),
+            0
+        );
         const promedio = total > 0 ? Math.round(totalEstudiantes / total) : 0;
 
         setText('programas-total', total);
@@ -80,18 +92,18 @@ window.Modules.programas = (function () {
         if (!tabla) return;
 
         if (!programasFiltrados.length) {
-            tabla.innerHTML = `<tr><td colspan="5">No hay programas para mostrar</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="5">No hay programas para mostrar</td></tr>';
             return;
         }
 
         tabla.innerHTML = programasFiltrados.map((programa) => `
             <tr>
-                <td>${programa.ProgramaAcademicoID}</td>
-                <td class="font-mono">${escapeHtml(programa.CodigoPrograma || '')}</td>
-                <td>${escapeHtml(programa.NombrePrograma || '')}</td>
-                <td>${programa.TotalEstudiantes ?? 0}</td>
+                <td>${escapeHtml(programa.ProgramaAcademicoID || programa.ProgramaID || '')}</td>
+                <td class="font-mono">${escapeHtml(programa.CodigoPrograma || programa.Codigo || '')}</td>
+                <td>${escapeHtml(programa.NombrePrograma || programa.Nombre || '')}</td>
+                <td>${escapeHtml(programa.TotalEstudiantes ?? 0)}</td>
                 <td>
-                    <button class="btn btn-outline" onclick="Modules.programas.verDetalle(${programa.ProgramaAcademicoID})">
+                    <button class="btn btn-outline" onclick="window.Modules.programas.verDetalle(${programa.ProgramaAcademicoID || programa.ProgramaID})">
                         Ver
                     </button>
                 </td>
@@ -101,20 +113,20 @@ window.Modules.programas = (function () {
 
     async function verDetalle(id) {
         try {
-            const response = await ApiService.obtenerProgramaPorId(id);
+            const response = await window.ApiService.obtenerProgramaPorId(id);
             const programa = response.data || {};
 
-            UI.openModal({
-                title: `Programa #${programa.ProgramaAcademicoID || ''}`,
+            window.UI.openModal({
+                title: `Programa #${programa.ProgramaAcademicoID || programa.ProgramaID || ''}`,
                 body: `
                     <div class="resumen-financiero">
                         <div class="mini-card">
                             <div class="mini-card-label">ID</div>
-                            <div class="mini-card-value">${programa.ProgramaAcademicoID || 'N/D'}</div>
+                            <div class="mini-card-value">${programa.ProgramaAcademicoID || programa.ProgramaID || 'N/D'}</div>
                         </div>
                         <div class="mini-card">
                             <div class="mini-card-label">Código</div>
-                            <div class="mini-card-value">${escapeHtml(programa.CodigoPrograma || '')}</div>
+                            <div class="mini-card-value">${escapeHtml(programa.CodigoPrograma || programa.Codigo || '')}</div>
                         </div>
                         <div class="mini-card">
                             <div class="mini-card-label">Estudiantes</div>
@@ -123,8 +135,8 @@ window.Modules.programas = (function () {
                     </div>
 
                     <div class="mt-2">
-                        <p><strong>Nombre del programa:</strong> ${escapeHtml(programa.NombrePrograma || '')}</p>
-                        <p><strong>Código:</strong> ${escapeHtml(programa.CodigoPrograma || '')}</p>
+                        <p><strong>Nombre del programa:</strong> ${escapeHtml(programa.NombrePrograma || programa.Nombre || '')}</p>
+                        <p><strong>Código:</strong> ${escapeHtml(programa.CodigoPrograma || programa.Codigo || '')}</p>
                         <p><strong>Total de estudiantes:</strong> ${programa.TotalEstudiantes || 0}</p>
                     </div>
                 `,
@@ -132,39 +144,26 @@ window.Modules.programas = (function () {
             });
         } catch (error) {
             console.error('Error obteniendo detalle del programa:', error);
-            UI.showMessage('programas-message', 'danger', error.message || 'No se pudo obtener el detalle del programa.');
+            window.UI.showMessage(
+                'programas-message',
+                'danger',
+                error.message || 'No se pudo obtener el detalle del programa.'
+            );
         }
     }
 
     function mostrarAvisoNuevoPrograma() {
-        UI.openModal({
+        window.UI.openModal({
             title: 'Gestión de programas',
             body: `
                 <div class="alert alert-info">
                     Este módulo ya consulta programas reales desde la base de datos.
                     <br><br>
                     La creación y edición de programas todavía no está habilitada en el backend actual.
-                    Cuando quieras, seguimos con esa parte y te doy endpoints y formularios completos.
                 </div>
             `,
             hideFooter: true
         });
-    }
-
-    function setText(id, value) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.textContent = value;
-        }
-    }
-
-    function escapeHtml(texto) {
-        return String(texto ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
     }
 
     return {

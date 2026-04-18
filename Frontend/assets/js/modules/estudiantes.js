@@ -11,24 +11,25 @@ window.Modules.estudiantes = (function () {
     function configurarEventos() {
         const btnNuevo = document.getElementById('btn-nuevo-estudiante');
 
-        if (btnNuevo) {
+        if (btnNuevo && !btnNuevo.dataset.bound) {
+            btnNuevo.dataset.bound = 'true';
             btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = manejarRecargaEstudiantes;
+            btnNuevo.addEventListener('click', manejarRecargaEstudiantes);
         }
     }
 
     async function manejarRecargaEstudiantes() {
-        UI.clearMessage('estudiantes-message');
+        window.UI.clearMessage('estudiantes-message');
 
         try {
             await cargarEstudiantes();
-            UI.showMessage(
+            window.UI.showMessage(
                 'estudiantes-message',
                 'success',
                 'Listado de estudiantes actualizado correctamente.'
             );
         } catch (error) {
-            UI.showMessage(
+            window.UI.showMessage(
                 'estudiantes-message',
                 'danger',
                 error.message || 'No se pudo actualizar el listado.'
@@ -41,15 +42,15 @@ window.Modules.estudiantes = (function () {
         if (!tabla) return;
 
         try {
-            tabla.innerHTML = `<tr><td colspan="5">Cargando...</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="5">Cargando...</td></tr>';
 
-            const response = await ApiService.obtenerEstudiantes();
+            const response = await window.ApiService.obtenerEstudiantes();
             estudiantes = Array.isArray(response.data) ? response.data : [];
 
             renderTabla();
         } catch (error) {
             console.error('Error cargando estudiantes:', error);
-            tabla.innerHTML = `<tr><td colspan="5">Error cargando datos</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="5">Error cargando datos</td></tr>';
             throw error;
         }
     }
@@ -59,12 +60,12 @@ window.Modules.estudiantes = (function () {
         if (!tabla) return;
 
         if (!estudiantes.length) {
-            tabla.innerHTML = `<tr><td colspan="5">No hay estudiantes registrados</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="5">No hay estudiantes registrados</td></tr>';
             return;
         }
 
         tabla.innerHTML = estudiantes.map((est) => {
-            const estado = est.EstadoAcademico || 'N/D';
+            const estado = est.EstadoAcademico || est.estadoAcademico || 'N/D';
             const badgeClass = getBadgeEstado(estado);
 
             return `
@@ -78,7 +79,7 @@ window.Modules.estudiantes = (function () {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-outline" onclick="Modules.estudiantes.ver(${Number(est.EstudianteID)})">
+                        <button class="btn btn-outline" onclick="window.Modules.estudiantes.ver(${Number(est.EstudianteID)})">
                             Ver
                         </button>
                     </td>
@@ -91,7 +92,7 @@ window.Modules.estudiantes = (function () {
         const est = estudiantes.find((e) => Number(e.EstudianteID) === Number(id));
         if (!est) return;
 
-        UI.openModal({
+        window.UI.openModal({
             title: 'Detalle del estudiante',
             body: `
                 <p><strong>ID Estudiante:</strong> ${escapeHtml(est.EstudianteID)}</p>

@@ -3,86 +3,117 @@ document.addEventListener('DOMContentLoaded', async () => {
         await inicializarAplicacion();
     } catch (error) {
         console.error('Error al iniciar la aplicación:', error);
-        UI.hideLoader();
-        UI.hidePageLoader();
+        window.UI.hideLoader?.();
+        window.UI.hidePageLoader?.();
 
         const systemVisible = !document.getElementById('system-shell')?.classList.contains('hidden');
 
         if (systemVisible) {
-            UI.showMessage(
+            window.UI.showMessage(
                 'global-message',
                 'danger',
-                error.message || 'No se pudo iniciar la aplicación'
+                error.message || 'No se pudo iniciar la aplicación.'
             );
         } else {
-            UI.showMessage(
+            window.UI.showMessage(
                 'login-message',
                 'danger',
-                error.message || 'No se pudo iniciar la aplicación'
+                error.message || 'No se pudo iniciar la aplicación.'
             );
         }
     }
 });
 
 async function inicializarAplicacion() {
-    UI.showLoader();
+    window.UI.showLoader?.();
 
-    await UI.loadComponent('sidebar-container', './components/sidebar.html');
-    await UI.loadComponent('topbar-container', './components/topbar.html');
-    await UI.loadComponent('footer-container', './components/footer.html');
-    await UI.loadComponent('loader-container', './components/loaders.html');
-    await UI.loadComponent('modal-container', './components/modals.html');
-
+    await cargarComponentesBase();
     configurarEventosLogin();
     configurarEventosGlobales();
 
-    const session = Auth.getSession();
+    const session = window.Auth.getSession();
 
-    if (session) {
-        mostrarSistema(session);
-        await verificarBackend();
-        await abrirVistaInicial();
+    if (session && window.Auth.isAuthenticated()) {
+        try {
+            await verificarBackend();
+            await iniciarSesionUI(session, { restaurada: true });
+        } catch (error) {
+            console.error('La sesión guardada no pudo restaurarse:', error);
+            window.StorageManager.clearSession();
+
+            if (window.SessionUser?.clear) {
+                window.SessionUser.clear();
+            }
+
+            mostrarLogin();
+            window.UI.showMessage(
+                'login-message',
+                'warning',
+                'La sesión anterior no pudo restaurarse. Inicie sesión nuevamente.'
+            );
+        }
     } else {
         mostrarLogin();
     }
 
-    UI.hideLoader();
+    window.UI.hideLoader?.();
+}
+
+async function cargarComponentesBase() {
+    const componentes = [
+        ['footer-container', './assets/components/footer.html'],
+        ['loader-container', './assets/components/loaders.html'],
+        ['modal-container', './assets/components/modals.html'],
+        ['topbar-container', './assets/components/topbar-base.html']
+    ];
+
+    for (const [containerId, path] of componentes) {
+        try {
+            await window.UI.loadComponent(containerId, path);
+        } catch (error) {
+            console.warn(`No se pudo cargar ${path}, se continúa con la inicialización.`, error);
+        }
+    }
 }
 
 function configurarEventosLogin() {
     const loginForm = document.getElementById('login-form');
-    if (!loginForm) return;
+    if (!loginForm || loginForm.dataset.bound === 'true') return;
+
+    loginForm.dataset.bound = 'true';
 
     loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
 
         const username = document.getElementById('login-user')?.value.trim() || '';
         const password = document.getElementById('login-pass')?.value.trim() || '';
-        const role = document.getElementById('login-role')?.value || 'admin';
 
         if (!username || !password) {
-            UI.showMessage('login-message', 'danger', 'Debe completar usuario y contraseña.');
+            window.UI.showMessage('login-message', 'danger', 'Debe completar usuario y contraseña.');
             return;
         }
 
-        UI.clearMessage('login-message');
-        UI.showLoader();
+        window.UI.clearMessage('login-message');
+        window.UI.showLoader?.();
 
         try {
             await verificarBackend();
 
-            const session = Auth.login({ username, role });
-            mostrarSistema(session);
-            await abrirVistaInicial();
+            const session = await window.Auth.login({
+                username,
+                password
+            });
+
+            await iniciarSesionUI(session, { restaurada: false });
         } catch (error) {
             console.error('Error al iniciar sesión:', error);
-            UI.showMessage(
+            window.UI.showMessage(
                 'login-message',
                 'danger',
-                error.message || 'No se pudo conectar con el backend.'
+                error.message || 'No se pudo iniciar sesión.'
             );
         } finally {
-            UI.hideLoader();
+            window.UI.hideLoader?.();
         }
     });
 }
@@ -91,28 +122,29 @@ function configurarEventosGlobales() {
     document.addEventListener('click', async (event) => {
         const logoutButton = event.target.closest('[data-action="logout"]');
         if (!logoutButton) return;
-        Auth.logout();
+
+        window.Auth.logout();
     });
 
     document.addEventListener('click', async (event) => {
         const dashboardButton = event.target.closest('[data-action="dashboard"]');
         if (!dashboardButton) return;
 
-        UI.showPageLoader();
-        UI.clearMessage('global-message');
+        window.UI.showPageLoader?.();
+        window.UI.clearMessage('global-message');
 
         try {
-            await abrirDashboardDirecto();
-            marcarNavActiva('');
+            await abrirVistaInicial();
+            marcarNavActiva(null);
         } catch (error) {
-            console.error('Error cargando dashboard:', error);
-            UI.showMessage(
+            console.error('Error cargando vista inicial:', error);
+            window.UI.showMessage(
                 'global-message',
                 'danger',
-                error.message || 'No se pudo cargar el dashboard.'
+                error.message || 'No se pudo cargar la vista inicial.'
             );
         } finally {
-            UI.hidePageLoader();
+            window.UI.hidePageLoader?.();
         }
     });
 
@@ -121,48 +153,99 @@ function configurarEventosGlobales() {
         if (!pageButton) return;
 
         const page = pageButton.getAttribute('data-page');
-        UI.showPageLoader();
-        UI.clearMessage('global-message');
+        const title = pageButton.getAttribute('data-title') || 'Módulo';
+        const subtitle = pageButton.getAttribute('data-subtitle') || '';
+
+        window.UI.showPageLoader?.();
+        window.UI.clearMessage('global-message');
 
         try {
-            await abrirModuloDirecto(page);
+            if (
+                window.AccessControl &&
+                typeof window.AccessControl.canAccessPage === 'function'
+            ) {
+                const permitido = window.AccessControl.canAccessPage(window.Auth.getSession(), page);
+                if (!permitido) {
+                    throw new Error('No tiene permisos para acceder a esta sección.');
+                }
+            }
+
+            await abrirModulo(page, title, subtitle);
             marcarNavActiva(page);
         } catch (error) {
-            console.error('Error cargando página:', error);
-            UI.showMessage(
+            console.error('Error cargando módulo:', error);
+            window.UI.showMessage(
                 'global-message',
                 'danger',
                 error.message || 'No se pudo cargar la página solicitada.'
             );
         } finally {
-            UI.hidePageLoader();
+            window.UI.hidePageLoader?.();
         }
     });
 
     document.addEventListener('click', async (event) => {
         if (event.target.id === 'global-modal-close-btn') {
-            UI.closeModal();
+            window.UI.closeModal?.();
             return;
         }
 
         if (event.target.id === 'global-modal-cancel-btn') {
-            UI.closeModal();
+            window.UI.closeModal?.();
             return;
         }
 
         if (event.target.id === 'global-modal-overlay') {
-            UI.closeModal();
+            window.UI.closeModal?.();
             return;
         }
 
         if (event.target.id === 'global-modal-confirm-btn') {
-            await UI.confirmModal();
+            await window.UI.confirmModal?.();
         }
     });
 }
 
+async function iniciarSesionUI(session, { restaurada = false } = {}) {
+    mostrarSistema();
+
+    await cargarSidebarPorRol(session);
+    actualizarIdentidadUI(session);
+
+    if (window.SessionUser?.set) {
+        window.SessionUser.set(session);
+    }
+
+    if (!restaurada && session?.debeCambiarPassword && session?.role === 'estudiante') {
+        window.UI.showMessage(
+            'global-message',
+            'warning',
+            'Debe cambiar su contraseña temporal antes de continuar.'
+        );
+    } else {
+        window.UI.clearMessage('global-message');
+    }
+
+    await abrirVistaInicial();
+}
+
+async function cargarSidebarPorRol(session) {
+    const role = session?.role || 'usuario';
+
+    if (
+        window.SidebarBuilder &&
+        typeof window.SidebarBuilder.render === 'function'
+    ) {
+        await window.SidebarBuilder.render(role);
+        return;
+    }
+
+    const fallbackPath = './assets/components/sidebar.html';
+    await window.UI.loadComponent('sidebar-container', fallbackPath);
+}
+
 async function verificarBackend() {
-    const resultado = await ApiService.testBackend();
+    const resultado = await window.ApiService.testBackend();
     console.log('Backend verificado correctamente:', resultado);
     return resultado;
 }
@@ -172,63 +255,167 @@ function mostrarLogin() {
     document.getElementById('system-shell')?.classList.add('hidden');
 }
 
-function mostrarSistema(session) {
+function mostrarSistema() {
     document.getElementById('login-screen')?.classList.add('hidden');
     document.getElementById('system-shell')?.classList.remove('hidden');
+}
 
+function actualizarIdentidadUI(session) {
     const sidebarUserName = document.getElementById('sidebar-user-name');
     const sidebarUserRole = document.getElementById('sidebar-user-role');
     const sidebarUserAvatar = document.getElementById('sidebar-user-avatar');
     const topbarUserName = document.getElementById('topbar-user-name');
 
-    if (sidebarUserName) sidebarUserName.textContent = session.username;
-    if (sidebarUserRole) sidebarUserRole.textContent = session.displayName;
-    if (sidebarUserAvatar) sidebarUserAvatar.textContent = session.initials;
-    if (topbarUserName) topbarUserName.textContent = session.displayName;
+    const nombreMostrar = session?.fullName || session?.username || 'Usuario';
+    const rolMostrar = session?.roleLabel || 'Usuario';
+    const iniciales = session?.initials || window.Helpers.getInitials(nombreMostrar);
+
+    if (sidebarUserName) sidebarUserName.textContent = nombreMostrar;
+    if (sidebarUserRole) sidebarUserRole.textContent = rolMostrar;
+    if (sidebarUserAvatar) sidebarUserAvatar.textContent = iniciales;
+    if (topbarUserName) topbarUserName.textContent = nombreMostrar;
 }
 
 async function abrirVistaInicial() {
-    await abrirDashboardDirecto();
-    marcarNavActiva('');
+    const session = window.Auth.getSession();
+    const role = session?.role || 'usuario';
+
+    const routeCandidates = obtenerRutasInicio(role);
+
+    for (const route of routeCandidates) {
+        try {
+            await abrirModulo(route.path, route.title, route.subtitle);
+            marcarNavActiva(route.markAsDashboard ? null : route.path);
+            return;
+        } catch (error) {
+            console.warn(`No se pudo cargar ruta inicial ${route.path}:`, error.message);
+        }
+    }
+
+    await renderInicioFallback(role, session);
+    marcarNavActiva(null);
 }
 
-async function abrirModuloDirecto(page) {
-    switch (page) {
-        case './pages/dashboard.html':
-            await abrirDashboardDirecto();
-            break;
-        case './pages/estudiantes.html':
-            await abrirEstudiantesDirecto();
-            break;
-        case './pages/cursos.html':
-            await abrirCursosDirecto();
-            break;
-        case './pages/periodos.html':
-            await abrirPeriodosDirecto();
-            break;
-        case './pages/secciones.html':
-            await abrirSeccionesDirecto();
-            break;
-        case './pages/usuarios.html':
-            await abrirUsuariosDirecto();
-            break;
-        case './pages/programas.html':
-            await abrirProgramasDirecto();
-            break;
-        case './pages/facturas.html':
-            await abrirFacturasDirecto();
-            break;
-        case './pages/estado-cuenta.html':
-            await abrirEstadosCuentaDirecto();
-            break;
-        default:
-            await Router.loadPage(
-                page,
-                document.getElementById('page-title')?.textContent || 'Módulo',
-                document.getElementById('page-subtitle')?.textContent || ''
-            );
-            break;
+function obtenerRutasInicio(role) {
+    const map = {
+        admin: [
+            {
+                path: './pages/admin/inicio.html',
+                title: 'Panel de Administración',
+                subtitle: 'Gestión general del sistema'
+            },
+            {
+                path: './pages/admin/dashboard.html',
+                title: 'Dashboard',
+                subtitle: 'Resumen general del sistema',
+                markAsDashboard: true
+            }
+        ],
+        registro: [
+            {
+                path: './pages/registro/inicio.html',
+                title: 'Panel de Registro Académico',
+                subtitle: 'Gestión académica y matrícula'
+            }
+        ],
+        tesoreria: [
+            {
+                path: './pages/tesoreria/inicio.html',
+                title: 'Panel de Tesorería',
+                subtitle: 'Facturación, pagos y estados financieros'
+            }
+        ],
+        auditor: [
+            {
+                path: './pages/auditor/inicio.html',
+                title: 'Portal del Auditor',
+                subtitle: 'Bitácoras, trazabilidad y reportes'
+            }
+        ],
+        estudiante: [
+            {
+                path: './pages/estudiante/inicio.html',
+                title: 'Portal del Estudiante',
+                subtitle: 'Consulta de matrícula, cursos y pagos'
+            }
+        ],
+        docente: [
+            {
+                path: './pages/docente/inicio.html',
+                title: 'Portal del Docente',
+                subtitle: 'Cursos, horarios y estudiantes matriculados'
+            }
+        ]
+    };
+
+    return map[role] || [];
+}
+
+async function renderInicioFallback(role, session) {
+    const dynamicContainer = prepararContenedorModulo(
+        obtenerTituloInicio(role),
+        obtenerSubtituloInicio(role)
+    );
+
+    const nombre = escapeHtml(session?.fullName || session?.username || 'Usuario');
+    const rolLabel = escapeHtml(session?.roleLabel || 'Usuario');
+
+    dynamicContainer.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <div>
+                    <h3>Bienvenido</h3>
+                    <p>Sesión iniciada correctamente</p>
+                </div>
+            </div>
+            <div class="card-body">
+                <p><strong>Usuario:</strong> ${nombre}</p>
+                <p><strong>Rol:</strong> ${rolLabel}</p>
+                <p class="mt-2">
+                    La vista inicial de este rol aún no está disponible o no pudo cargarse.
+                </p>
+            </div>
+        </div>
+    `;
+}
+
+function obtenerTituloInicio(role) {
+    const map = {
+        admin: 'Panel de Administración',
+        registro: 'Panel de Registro Académico',
+        tesoreria: 'Panel de Tesorería',
+        estudiante: 'Portal del Estudiante',
+        docente: 'Portal del Docente',
+        auditor: 'Portal del Auditor'
+    };
+
+    return map[role] || 'Inicio';
+}
+
+function obtenerSubtituloInicio(role) {
+    const map = {
+        admin: 'Gestión general del sistema',
+        registro: 'Gestión académica y matrícula',
+        tesoreria: 'Facturación, pagos y estados financieros',
+        estudiante: 'Consulta de matrícula, cursos y pagos',
+        docente: 'Cursos, horarios y estudiantes matriculados',
+        auditor: 'Bitácoras, trazabilidad y reportes'
+    };
+
+    return map[role] || 'Panel principal';
+}
+
+async function abrirModulo(page, title, subtitle) {
+    if (!page) {
+        throw new Error('No se indicó la página a cargar.');
     }
+
+    if (window.Router && typeof window.Router.loadPage === 'function') {
+        await window.Router.loadPage(page, title, subtitle);
+        return;
+    }
+
+    await cargarHtmlEnContenedor(page, title, subtitle);
 }
 
 function marcarNavActiva(page) {
@@ -265,6 +452,10 @@ function prepararContenedorModulo(titulo, subtitulo) {
     if (pageTitle) pageTitle.textContent = titulo;
     if (pageSubtitle) pageSubtitle.textContent = subtitulo;
 
+    if (window.UI?.setPageHeader) {
+        window.UI.setPageHeader(titulo, subtitulo);
+    }
+
     return dynamicContainer;
 }
 
@@ -286,918 +477,7 @@ async function cargarHtmlEnContenedor(pagePath, titulo, subtitulo) {
 }
 
 /* =========================
-   DASHBOARD
-========================= */
-async function abrirDashboardDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/dashboard.html',
-        'Dashboard',
-        'Resumen general del sistema'
-    );
-
-    await cargarDashboardDirecto();
-}
-
-async function cargarDashboardDirecto() {
-    try {
-        UI.clearMessage('dashboard-message');
-
-        const response = await ApiService.obtenerDashboardResumen();
-        const payload = response?.data ?? {};
-
-        const resumen = payload.resumen || {};
-        const matriculasRecientes = Array.isArray(payload.matriculasRecientes) ? payload.matriculasRecientes : [];
-        const pagosRecientes = Array.isArray(payload.pagosRecientes) ? payload.pagosRecientes : [];
-        const periodos = Array.isArray(payload.periodos) ? payload.periodos : [];
-
-        setText('dash-total-estudiantes', resumen.TotalEstudiantes ?? 0);
-        setText('dash-estudiantes-activos', resumen.EstudiantesActivos ?? 0);
-        setText('dash-total-cursos', resumen.TotalCursos ?? 0);
-        setText('dash-cursos-activos', resumen.CursosActivos ?? 0);
-        setText('dash-total-periodos', resumen.TotalPeriodos ?? 0);
-        setText('dash-periodos-activos', resumen.PeriodosActivos ?? 0);
-        setText('dash-total-secciones', resumen.TotalSecciones ?? 0);
-        setText('dash-secciones-activas', resumen.SeccionesActivas ?? 0);
-        setText('dash-total-matriculas', resumen.TotalMatriculas ?? 0);
-        setText('dash-matriculas-pendientes', resumen.MatriculasPendientes ?? 0);
-        setText('dash-matriculas-confirmadas', resumen.MatriculasConfirmadas ?? 0);
-        setText('dash-total-pagos', resumen.TotalPagos ?? 0);
-        setText('dash-monto-recaudado', Helpers.formatCurrency(resumen.MontoRecaudado ?? 0));
-        setText('dash-facturas-pendientes', resumen.FacturasPendientes ?? 0);
-        setText('dash-saldo-pendiente-total', Helpers.formatCurrency(resumen.SaldoPendienteTotal ?? 0));
-
-        const tablaMatriculas = document.getElementById('tabla-dashboard-matriculas');
-        if (tablaMatriculas) {
-            tablaMatriculas.innerHTML = matriculasRecientes.length
-                ? matriculasRecientes.map(item => `
-                    <tr>
-                        <td>${escapeHtml(item.MatriculaID)}</td>
-                        <td>${escapeHtml(item.NombreEstudiante || 'N/D')}</td>
-                        <td>${escapeHtml(construirNombrePeriodo(item))}</td>
-                        <td>${escapeHtml(item.CreditosTotales ?? 0)}</td>
-                        <td>${Helpers.formatCurrency(item.CostoTotal ?? 0)}</td>
-                        <td>
-                            <span class="badge ${getBadgeEstadoMatricula(item.EstadoMatricula)}">
-                                ${escapeHtml(item.EstadoMatricula || 'N/D')}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('')
-                : `<tr><td colspan="6">No hay matrículas recientes</td></tr>`;
-        }
-
-        const tablaPagos = document.getElementById('tabla-dashboard-pagos');
-        if (tablaPagos) {
-            tablaPagos.innerHTML = pagosRecientes.length
-                ? pagosRecientes.map(item => `
-                    <tr>
-                        <td>${escapeHtml(item.PagoID)}</td>
-                        <td>${escapeHtml(item.NombreEstudiante || 'N/D')}</td>
-                        <td>${escapeHtml(item.NumeroFactura || 'N/D')}</td>
-                        <td>${Helpers.formatCurrency(item.MontoPago ?? 0)}</td>
-                        <td>${escapeHtml(item.MetodoPago || 'N/D')}</td>
-                        <td>
-                            <span class="badge ${getBadgeEstadoPago(item.EstadoPago)}">
-                                ${escapeHtml(item.EstadoPago || 'N/D')}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('')
-                : `<tr><td colspan="6">No hay pagos recientes</td></tr>`;
-        }
-
-        const tablaPeriodos = document.getElementById('tabla-dashboard-periodos');
-        if (tablaPeriodos) {
-            tablaPeriodos.innerHTML = periodos.length
-                ? periodos.map(item => `
-                    <tr>
-                        <td>${escapeHtml(item.PeriodoID)}</td>
-                        <td>${escapeHtml(item.NombrePeriodo || 'N/D')}</td>
-                        <td>${escapeHtml(item.TipoPeriodo || 'N/D')}</td>
-                        <td>${escapeHtml(item.Anio ?? 'N/D')}</td>
-                        <td>
-                            <span class="badge ${getBadgeEstado(item.EstadoPeriodo)}">
-                                ${escapeHtml(item.EstadoPeriodo || 'N/D')}
-                            </span>
-                        </td>
-                    </tr>
-                `).join('')
-                : `<tr><td colspan="5">No hay períodos registrados</td></tr>`;
-        }
-    } catch (error) {
-        console.error('Error cargando dashboard:', error);
-        UI.showMessage('dashboard-message', 'danger', error.message || 'No se pudo cargar el dashboard.');
-    }
-}
-
-/* =========================
-   ESTUDIANTES
-========================= */
-async function abrirEstudiantesDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/estudiantes.html',
-        'Estudiantes',
-        'Gestión de estudiantes'
-    );
-
-    await cargarEstudiantesDirecto();
-}
-
-async function cargarEstudiantesDirecto() {
-    const tabla = document.getElementById('tabla-estudiantes');
-
-    if (!tabla) {
-        throw new Error('No se encontró la tabla de estudiantes.');
-    }
-
-    tabla.innerHTML = `<tr><td colspan="5">Cargando estudiantes...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerEstudiantes();
-        const estudiantes = Array.isArray(response.data) ? response.data : [];
-
-        if (!estudiantes.length) {
-            tabla.innerHTML = `<tr><td colspan="5">No hay estudiantes registrados</td></tr>`;
-            return;
-        }
-
-        tabla.innerHTML = estudiantes.map(est => `
-            <tr>
-                <td>${escapeHtml(est.EstudianteID)}</td>
-                <td>${escapeHtml(est.NombreCompleto || 'N/D')}</td>
-                <td>${escapeHtml(est.CorreoInstitucional || 'N/D')}</td>
-                <td>
-                    <span class="badge ${getBadgeEstado(est.EstadoAcademico)}">
-                        ${escapeHtml(est.EstadoAcademico || 'N/D')}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-outline" onclick="verDetalleEstudiante(${est.EstudianteID})">
-                        Ver
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-        window.__estudiantesCache = estudiantes;
-
-        const btnNuevo = document.getElementById('btn-nuevo-estudiante');
-        if (btnNuevo) {
-            btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = async () => {
-                UI.clearMessage('estudiantes-message');
-                await cargarEstudiantesDirecto();
-            };
-        }
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="5">Error cargando datos</td></tr>`;
-    }
-}
-
-/* =========================
-   CURSOS
-========================= */
-async function abrirCursosDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/cursos.html',
-        'Cursos',
-        'Gestión de cursos'
-    );
-
-    await cargarCursosDirecto();
-}
-
-async function cargarCursosDirecto() {
-    const tabla = document.getElementById('tabla-cursos');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="6">Cargando cursos...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerCursos();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        tabla.innerHTML = data.length
-            ? data.map(c => `
-                <tr>
-                    <td>${escapeHtml(c.CursoID)}</td>
-                    <td>${escapeHtml(c.CodigoCurso || 'N/D')}</td>
-                    <td>${escapeHtml(c.NombreCurso || 'N/D')}</td>
-                    <td>${escapeHtml(c.Creditos ?? 0)}</td>
-                    <td>
-                        <span class="badge ${getBadgeEstado(c.EstadoCurso)}">
-                            ${escapeHtml(c.EstadoCurso || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetalleCurso(${c.CursoID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="6">No hay cursos registrados</td></tr>`;
-
-        window.__cursosCache = data;
-
-        const btnNuevo = document.getElementById('btn-nuevo-curso');
-        if (btnNuevo) {
-            btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = async () => {
-                UI.clearMessage('cursos-message');
-                await cargarCursosDirecto();
-            };
-        }
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="6">Error cargando cursos</td></tr>`;
-    }
-}
-
-/* =========================
-   PERIODOS
-========================= */
-async function abrirPeriodosDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/periodos.html',
-        'Períodos',
-        'Gestión de períodos'
-    );
-
-    await cargarPeriodosDirecto();
-}
-
-async function cargarPeriodosDirecto() {
-    const tabla = document.getElementById('tabla-periodos');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="7">Cargando períodos...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerPeriodos();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        tabla.innerHTML = data.length
-            ? data.map(p => `
-                <tr>
-                    <td>${escapeHtml(p.PeriodoID)}</td>
-                    <td>${escapeHtml(p.NombrePeriodo || 'N/D')}</td>
-                    <td>${escapeHtml(p.TipoPeriodo || 'N/D')}</td>
-                    <td>${escapeHtml(formatearFecha(p.FechaInicio))}</td>
-                    <td>${escapeHtml(formatearFecha(p.FechaFin))}</td>
-                    <td>
-                        <span class="badge ${getBadgeEstado(p.EstadoPeriodo)}">
-                            ${escapeHtml(p.EstadoPeriodo || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetallePeriodo(${p.PeriodoID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="7">No hay períodos registrados</td></tr>`;
-
-        window.__periodosCache = data;
-
-        const btnNuevo = document.getElementById('btn-nuevo-periodo');
-        if (btnNuevo) {
-            btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = async () => {
-                UI.clearMessage('periodos-message');
-                await cargarPeriodosDirecto();
-            };
-        }
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="7">Error cargando períodos</td></tr>`;
-    }
-}
-
-/* =========================
-   SECCIONES
-========================= */
-async function abrirSeccionesDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/secciones.html',
-        'Secciones',
-        'Gestión de secciones'
-    );
-
-    await cargarSeccionesDirecto();
-}
-
-async function cargarSeccionesDirecto() {
-    const tabla = document.getElementById('tabla-secciones');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="7">Cargando secciones...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerSecciones();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        const secciones = normalizarSecciones(data);
-
-        tabla.innerHTML = secciones.length
-            ? secciones.map(s => `
-                <tr>
-                    <td>${escapeHtml(s.SeccionID)}</td>
-                    <td>${escapeHtml(s.NombreCurso || 'N/D')}</td>
-                    <td>${escapeHtml(construirPeriodoTexto(s))}</td>
-                    <td>${escapeHtml(s.CupoMaximo ?? 0)}</td>
-                    <td>${escapeHtml(s.CupoDisponible ?? 0)}</td>
-                    <td>
-                        <span class="badge ${getBadgeEstado(s.EstadoSeccion)}">
-                            ${escapeHtml(s.EstadoSeccion || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetalleSeccion(${s.SeccionID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="7">No hay secciones registradas</td></tr>`;
-
-        window.__seccionesCache = secciones;
-
-        const btnNueva = document.getElementById('btn-nueva-seccion');
-        if (btnNueva) {
-            btnNueva.textContent = 'Actualizar listado';
-            btnNueva.onclick = async () => {
-                UI.clearMessage('secciones-message');
-                await cargarSeccionesDirecto();
-            };
-        }
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="7">Error cargando secciones</td></tr>`;
-    }
-}
-/* =========================
-   USUARIOS
-========================= */
-async function abrirUsuariosDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/usuarios.html',
-        'Usuarios',
-        'Gestión de usuarios'
-    );
-
-    await cargarUsuariosDirecto();
-}
-
-async function cargarUsuariosDirecto() {
-    const tabla = document.getElementById('tabla-usuarios');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="6">Cargando usuarios...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerUsuarios();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        tabla.innerHTML = data.length
-            ? data.map(u => `
-                <tr>
-                    <td>${escapeHtml(u.UsuarioID)}</td>
-                    <td>${escapeHtml(u.NombreCompleto || 'N/D')}</td>
-                    <td>${escapeHtml(u.CorreoInstitucional || 'N/D')}</td>
-                    <td>
-                        <span class="badge ${getBadgeRol(u.RolSistema)}">
-                            ${escapeHtml(u.RolSistema || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge ${getBadgeEstado(u.EstadoUsuario)}">
-                            ${escapeHtml(u.EstadoUsuario || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetalleUsuario(${u.UsuarioID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="6">No hay usuarios registrados</td></tr>`;
-
-        window.__usuariosCache = data;
-
-        setText('usuarios-total', data.length);
-        setText(
-            'usuarios-activos',
-            data.filter(u => String(u.EstadoUsuario || '').toLowerCase() === 'activo').length
-        );
-        setText(
-            'usuarios-estudiantes',
-            data.filter(u => String(u.RolSistema || '') === 'Estudiante').length
-        );
-        setText(
-            'usuarios-docentes',
-            data.filter(u => String(u.RolSistema || '') === 'Docente').length
-        );
-
-        const btnNuevo = document.getElementById('btn-nuevo-usuario');
-        if (btnNuevo) {
-            btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = async () => {
-                UI.clearMessage('usuarios-message');
-                await cargarUsuariosDirecto();
-            };
-        }
-
-        prepararFiltrosUsuarios();
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="6">Error cargando usuarios</td></tr>`;
-    }
-}
-
-function prepararFiltrosUsuarios() {
-    const btnFiltrar = document.getElementById('btn-filtrar-usuarios');
-    const inputBuscar = document.getElementById('filtro-usuario-buscar');
-    const selectRol = document.getElementById('filtro-usuario-rol');
-    const selectEstado = document.getElementById('filtro-usuario-estado');
-
-    const aplicar = () => {
-        const usuarios = Array.isArray(window.__usuariosCache) ? window.__usuariosCache : [];
-        const texto = String(inputBuscar?.value || '').trim().toLowerCase();
-        const rol = String(selectRol?.value || '').trim();
-        const estado = String(selectEstado?.value || '').trim();
-
-        const filtrados = usuarios.filter(usuario => {
-            const coincideTexto =
-                !texto ||
-                String(usuario.NombreCompleto || '').toLowerCase().includes(texto) ||
-                String(usuario.CorreoInstitucional || '').toLowerCase().includes(texto) ||
-                String(usuario.Identificacion || '').toLowerCase().includes(texto);
-
-            const coincideRol = !rol || String(usuario.RolSistema || '') === rol;
-            const coincideEstado = !estado || String(usuario.EstadoUsuario || '') === estado;
-
-            return coincideTexto && coincideRol && coincideEstado;
-        });
-
-        const tabla = document.getElementById('tabla-usuarios');
-        if (!tabla) return;
-
-        tabla.innerHTML = filtrados.length
-            ? filtrados.map(u => `
-                <tr>
-                    <td>${escapeHtml(u.UsuarioID)}</td>
-                    <td>${escapeHtml(u.NombreCompleto || 'N/D')}</td>
-                    <td>${escapeHtml(u.CorreoInstitucional || 'N/D')}</td>
-                    <td>
-                        <span class="badge ${getBadgeRol(u.RolSistema)}">
-                            ${escapeHtml(u.RolSistema || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <span class="badge ${getBadgeEstado(u.EstadoUsuario)}">
-                            ${escapeHtml(u.EstadoUsuario || 'N/D')}
-                        </span>
-                    </td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetalleUsuario(${u.UsuarioID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="6">No hay usuarios para mostrar</td></tr>`;
-
-        setText('usuarios-total', filtrados.length);
-        setText(
-            'usuarios-activos',
-            filtrados.filter(u => String(u.EstadoUsuario || '').toLowerCase() === 'activo').length
-        );
-        setText(
-            'usuarios-estudiantes',
-            filtrados.filter(u => String(u.RolSistema || '') === 'Estudiante').length
-        );
-        setText(
-            'usuarios-docentes',
-            filtrados.filter(u => String(u.RolSistema || '') === 'Docente').length
-        );
-    };
-
-    if (btnFiltrar && !btnFiltrar.dataset.bound) {
-        btnFiltrar.dataset.bound = 'true';
-        btnFiltrar.addEventListener('click', aplicar);
-    }
-
-    if (inputBuscar && !inputBuscar.dataset.bound) {
-        inputBuscar.dataset.bound = 'true';
-        inputBuscar.addEventListener('input', aplicar);
-    }
-
-    if (selectRol && !selectRol.dataset.bound) {
-        selectRol.dataset.bound = 'true';
-        selectRol.addEventListener('change', aplicar);
-    }
-
-    if (selectEstado && !selectEstado.dataset.bound) {
-        selectEstado.dataset.bound = 'true';
-        selectEstado.addEventListener('change', aplicar);
-    }
-}
-
-/* =========================
-   PROGRAMAS
-========================= */
-async function abrirProgramasDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/programas.html',
-        'Programas',
-        'Gestión de programas académicos'
-    );
-
-    await cargarProgramasDirecto();
-}
-
-async function cargarProgramasDirecto() {
-    const tabla = document.getElementById('tabla-programas');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="5">Cargando programas...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerProgramas();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        tabla.innerHTML = data.length
-            ? data.map(p => `
-                <tr>
-                    <td>${escapeHtml(p.ProgramaAcademicoID)}</td>
-                    <td>${escapeHtml(p.CodigoPrograma || 'N/D')}</td>
-                    <td>${escapeHtml(p.NombrePrograma || 'N/D')}</td>
-                    <td>${escapeHtml(p.TotalEstudiantes ?? 0)}</td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetallePrograma(${p.ProgramaAcademicoID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="5">No hay programas registrados</td></tr>`;
-
-        window.__programasCache = data;
-
-        const totalEstudiantes = data.reduce((acc, item) => acc + Number(item.TotalEstudiantes || 0), 0);
-        const promedio = data.length ? Math.round(totalEstudiantes / data.length) : 0;
-
-        setText('programas-total', data.length);
-        setText('programas-estudiantes', totalEstudiantes);
-        setText('programas-promedio', promedio);
-
-        const btnNuevo = document.getElementById('btn-nuevo-programa');
-        if (btnNuevo) {
-            btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = async () => {
-                UI.clearMessage('programas-message');
-                await cargarProgramasDirecto();
-            };
-        }
-
-        prepararFiltrosProgramas();
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="5">Error cargando programas</td></tr>`;
-    }
-}
-
-function prepararFiltrosProgramas() {
-    const btnFiltrar = document.getElementById('btn-filtrar-programas');
-    const inputBuscar = document.getElementById('filtro-programa-buscar');
-
-    const aplicar = () => {
-        const programas = Array.isArray(window.__programasCache) ? window.__programasCache : [];
-        const texto = String(inputBuscar?.value || '').trim().toLowerCase();
-
-        const filtrados = programas.filter(programa =>
-            !texto ||
-            String(programa.CodigoPrograma || '').toLowerCase().includes(texto) ||
-            String(programa.NombrePrograma || '').toLowerCase().includes(texto)
-        );
-
-        const tabla = document.getElementById('tabla-programas');
-        if (!tabla) return;
-
-        tabla.innerHTML = filtrados.length
-            ? filtrados.map(p => `
-                <tr>
-                    <td>${escapeHtml(p.ProgramaAcademicoID)}</td>
-                    <td>${escapeHtml(p.CodigoPrograma || 'N/D')}</td>
-                    <td>${escapeHtml(p.NombrePrograma || 'N/D')}</td>
-                    <td>${escapeHtml(p.TotalEstudiantes ?? 0)}</td>
-                    <td>
-                        <button class="btn btn-outline" onclick="verDetallePrograma(${p.ProgramaAcademicoID})">
-                            Ver
-                        </button>
-                    </td>
-                </tr>
-            `).join('')
-            : `<tr><td colspan="5">No hay programas para mostrar</td></tr>`;
-
-        const totalEstudiantes = filtrados.reduce((acc, item) => acc + Number(item.TotalEstudiantes || 0), 0);
-        const promedio = filtrados.length ? Math.round(totalEstudiantes / filtrados.length) : 0;
-
-        setText('programas-total', filtrados.length);
-        setText('programas-estudiantes', totalEstudiantes);
-        setText('programas-promedio', promedio);
-    };
-
-    if (btnFiltrar && !btnFiltrar.dataset.bound) {
-        btnFiltrar.dataset.bound = 'true';
-        btnFiltrar.addEventListener('click', aplicar);
-    }
-
-    if (inputBuscar && !inputBuscar.dataset.bound) {
-        inputBuscar.dataset.bound = 'true';
-        inputBuscar.addEventListener('input', aplicar);
-    }
-}
-
-/* =========================
-   FACTURAS
-========================= */
-async function abrirFacturasDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/facturas.html',
-        'Facturas',
-        'Gestión de facturación'
-    );
-
-    await cargarFacturasDirecto();
-}
-
-async function cargarFacturasDirecto() {
-    const tabla = document.getElementById('tabla-facturas');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="9">Cargando facturas...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerFacturas();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        renderTablaFacturas(data);
-        renderResumenFacturas(data);
-
-        window.__facturasCache = data;
-
-        prepararFiltrosFacturas();
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="9">Error cargando facturas</td></tr>`;
-    }
-}
-
-function renderTablaFacturas(data) {
-    const tabla = document.getElementById('tabla-facturas');
-    if (!tabla) return;
-
-    tabla.innerHTML = data.length
-        ? data.map(f => `
-            <tr>
-                <td>${escapeHtml(f.FacturaID)}</td>
-                <td>${escapeHtml(f.NumeroFactura || 'N/D')}</td>
-                <td>${escapeHtml(f.NombreEstudiante || 'N/D')}</td>
-                <td>${escapeHtml(f.NombrePeriodo || 'N/D')}</td>
-                <td>${Helpers.formatCurrency(f.Total ?? 0)}</td>
-                <td>${Helpers.formatCurrency(f.MontoPagado ?? 0)}</td>
-                <td>${Helpers.formatCurrency(f.SaldoPendiente ?? 0)}</td>
-                <td>
-                    <span class="badge ${getBadgeEstadoFactura(f.EstadoFactura)}">
-                        ${escapeHtml(f.EstadoFactura || 'N/D')}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-outline" onclick="verDetalleFactura(${f.FacturaID})">
-                        Ver
-                    </button>
-                </td>
-            </tr>
-        `).join('')
-        : `<tr><td colspan="9">No hay facturas para mostrar</td></tr>`;
-}
-
-function renderResumenFacturas(data) {
-    const totalFacturas = data.length;
-    const totalMonto = data.reduce((acc, item) => acc + Number(item.Total || 0), 0);
-    const totalSaldo = data.reduce((acc, item) => acc + Number(item.SaldoPendiente || 0), 0);
-
-    setText('facturas-total', totalFacturas);
-    setText('facturas-monto-total', Helpers.formatCurrency(totalMonto));
-    setText('facturas-saldo-total', Helpers.formatCurrency(totalSaldo));
-}
-
-function prepararFiltrosFacturas() {
-    const btnFiltrar = document.getElementById('btn-filtrar-facturas');
-    const inputBuscar = document.getElementById('filtro-factura-buscar');
-    const selectEstado = document.getElementById('filtro-factura-estado');
-
-    const aplicar = () => {
-        const facturas = Array.isArray(window.__facturasCache) ? window.__facturasCache : [];
-        const texto = String(inputBuscar?.value || '').trim().toLowerCase();
-        const estado = String(selectEstado?.value || '').trim();
-
-        const filtradas = facturas.filter(factura => {
-            const coincideTexto =
-                !texto ||
-                String(factura.NumeroFactura || '').toLowerCase().includes(texto) ||
-                String(factura.NombreEstudiante || '').toLowerCase().includes(texto) ||
-                String(factura.Carnet || '').toLowerCase().includes(texto) ||
-                String(factura.NombrePeriodo || '').toLowerCase().includes(texto);
-
-            const coincideEstado =
-                !estado || String(factura.EstadoFactura || '') === estado;
-
-            return coincideTexto && coincideEstado;
-        });
-
-        renderTablaFacturas(filtradas);
-        renderResumenFacturas(filtradas);
-    };
-
-    if (btnFiltrar && !btnFiltrar.dataset.bound) {
-        btnFiltrar.dataset.bound = 'true';
-        btnFiltrar.addEventListener('click', aplicar);
-    }
-
-    if (inputBuscar && !inputBuscar.dataset.bound) {
-        inputBuscar.dataset.bound = 'true';
-        inputBuscar.addEventListener('input', aplicar);
-    }
-
-    if (selectEstado && !selectEstado.dataset.bound) {
-        selectEstado.dataset.bound = 'true';
-        selectEstado.addEventListener('change', aplicar);
-    }
-}
-
-window.pagarFactura = async function (facturaID) {
-    try {
-        const facturas = Array.isArray(window.__facturasCache) ? window.__facturasCache : [];
-        const factura = facturas.find(f => Number(f.FacturaID) === Number(facturaID));
-
-        if (!factura) {
-            alert('No se encontró la factura.');
-            return;
-        }
-
-        if (!factura.EstudianteID || !factura.PeriodoID) {
-            alert('La factura no tiene los datos necesarios para registrar el pago.');
-            return;
-        }
-
-        const saldoPendiente = Number(factura.SaldoPendiente ?? 0);
-        const montoPago = saldoPendiente > 0 ? saldoPendiente : Number(factura.Total ?? 0);
-
-        await ApiService.registrarPago({
-            facturaId: Number(factura.FacturaID),
-            estudianteId: Number(factura.EstudianteID),
-            periodoId: Number(factura.PeriodoID),
-            montoPago,
-            metodoPago: 'Tarjeta',
-            referenciaPago: `WEB-${Date.now()}`
-        });
-
-        alert('Pago realizado correctamente');
-        await cargarFacturasDirecto();
-    } catch (error) {
-        alert(error.message || 'Error al pagar');
-        console.error(error);
-    }
-};
-
-/* =========================
-   ESTADO DE CUENTA
-========================= */
-async function abrirEstadosCuentaDirecto() {
-    await cargarHtmlEnContenedor(
-        './pages/estado-cuenta.html',
-        'Estado de Cuenta',
-        'Resumen financiero'
-    );
-
-    await cargarEstadosCuentaDirecto();
-}
-
-async function cargarEstadosCuentaDirecto() {
-    const tabla = document.getElementById('tabla-estado-cuenta');
-    if (!tabla) return;
-
-    tabla.innerHTML = `<tr><td colspan="9">Cargando estados de cuenta...</td></tr>`;
-
-    try {
-        const response = await ApiService.obtenerEstadosCuenta();
-        const data = Array.isArray(response.data) ? response.data : [];
-
-        renderTablaEstadosCuenta(data);
-        renderResumenEstadosCuenta(data);
-
-        window.__estadosCuentaCache = data;
-
-        prepararFiltrosEstadosCuenta();
-    } catch (error) {
-        console.error(error);
-        tabla.innerHTML = `<tr><td colspan="9">Error cargando estados de cuenta</td></tr>`;
-    }
-}
-
-function renderTablaEstadosCuenta(data) {
-    const tabla = document.getElementById('tabla-estado-cuenta');
-    if (!tabla) return;
-
-    tabla.innerHTML = data.length
-        ? data.map(e => `
-            <tr>
-                <td>${escapeHtml(e.EstadoCuentaID)}</td>
-                <td>${escapeHtml(e.NumeroFactura || 'N/D')}</td>
-                <td>${escapeHtml(e.NombreEstudiante || 'N/D')}</td>
-                <td>${escapeHtml(e.NombrePeriodo || 'N/D')}</td>
-                <td>${Helpers.formatCurrency(e.MontoTotal ?? 0)}</td>
-                <td>${Helpers.formatCurrency(e.MontoPagado ?? 0)}</td>
-                <td>${Helpers.formatCurrency(e.SaldoPendiente ?? 0)}</td>
-                <td>
-                    <span class="badge ${getBadgeEstadoFactura(e.EstadoCuenta)}">
-                        ${escapeHtml(e.EstadoCuenta || 'N/D')}
-                    </span>
-                </td>
-                <td>
-                    <button class="btn btn-outline" onclick="verDetalleEstadoCuenta(${e.EstadoCuentaID})">
-                        Ver
-                    </button>
-                </td>
-            </tr>
-        `).join('')
-        : `<tr><td colspan="9">No hay estados de cuenta para mostrar</td></tr>`;
-}
-
-function renderResumenEstadosCuenta(data) {
-    const totalRegistros = data.length;
-    const montoTotal = data.reduce((acc, item) => acc + Number(item.MontoTotal || 0), 0);
-    const montoPagado = data.reduce((acc, item) => acc + Number(item.MontoPagado || 0), 0);
-    const saldoPendiente = data.reduce((acc, item) => acc + Number(item.SaldoPendiente || 0), 0);
-
-    setText('estado-cuenta-total', totalRegistros);
-    setText('estado-cuenta-monto-total', Helpers.formatCurrency(montoTotal));
-    setText('estado-cuenta-monto-pagado', Helpers.formatCurrency(montoPagado));
-    setText('estado-cuenta-saldo-pendiente', Helpers.formatCurrency(saldoPendiente));
-}
-
-function prepararFiltrosEstadosCuenta() {
-    const btnFiltrar = document.getElementById('btn-filtrar-estado-cuenta');
-    const inputBuscar = document.getElementById('filtro-estado-cuenta-buscar');
-    const selectEstado = document.getElementById('filtro-estado-cuenta-estado');
-
-    const aplicar = () => {
-        const estadosCuenta = Array.isArray(window.__estadosCuentaCache) ? window.__estadosCuentaCache : [];
-        const texto = String(inputBuscar?.value || '').trim().toLowerCase();
-        const estado = String(selectEstado?.value || '').trim();
-
-        const filtrados = estadosCuenta.filter(item => {
-            const coincideTexto =
-                !texto ||
-                String(item.NumeroFactura || '').toLowerCase().includes(texto) ||
-                String(item.NombreEstudiante || '').toLowerCase().includes(texto) ||
-                String(item.Carnet || '').toLowerCase().includes(texto) ||
-                String(item.NombrePeriodo || '').toLowerCase().includes(texto);
-
-            const coincideEstado =
-                !estado || String(item.EstadoCuenta || '') === estado;
-
-            return coincideTexto && coincideEstado;
-        });
-
-        renderTablaEstadosCuenta(filtrados);
-        renderResumenEstadosCuenta(filtrados);
-    };
-
-    if (btnFiltrar && !btnFiltrar.dataset.bound) {
-        btnFiltrar.dataset.bound = 'true';
-        btnFiltrar.addEventListener('click', aplicar);
-    }
-
-    if (inputBuscar && !inputBuscar.dataset.bound) {
-        inputBuscar.dataset.bound = 'true';
-        inputBuscar.addEventListener('input', aplicar);
-    }
-
-    if (selectEstado && !selectEstado.dataset.bound) {
-        selectEstado.dataset.bound = 'true';
-        selectEstado.addEventListener('change', aplicar);
-    }
-}
-
-/* =========================
-   HELPERS EXTRA
+   HELPERS GLOBALES
 ========================= */
 function setText(id, value) {
     const el = document.getElementById(id);
@@ -1245,8 +525,11 @@ function getBadgeEstado(estado) {
         case 'aplicado':
         case 'exitoso':
             return 'badge-success';
+
         case 'pendiente':
+        case 'parcial':
             return 'badge-warning';
+
         case 'inactivo':
         case 'inactiva':
         case 'anulada':
@@ -1255,7 +538,9 @@ function getBadgeEstado(estado) {
         case 'rechazado':
         case 'rechazada':
         case 'vencido':
+        case 'bloqueado':
             return 'badge-danger';
+
         default:
             return 'badge-gray';
     }
@@ -1279,8 +564,19 @@ function getBadgeRol(rol) {
             return 'badge-info';
         case 'docente':
             return 'badge-success';
-        case 'usuario':
-            return 'badge-gray';
+        case 'tesorería':
+        case 'tesoreria':
+            return 'badge-warning';
+        case 'administrador ti':
+        case 'admin':
+            return 'badge-danger';
+        case 'registro académico':
+        case 'registro academico':
+        case 'registro':
+            return 'badge-info';
+        case 'auditor institucional':
+        case 'auditor':
+            return 'badge-outline';
         default:
             return 'badge-gray';
     }
@@ -1308,7 +604,7 @@ function normalizarSecciones(data) {
                 TipoPeriodo: item.TipoPeriodo ?? '',
                 Anio: item.Anio ?? '',
                 DocenteID: item.DocenteID ?? null,
-                Docente: item.Docente ?? '',
+                Docente: item.Docente || item.NombreDocente || '',
                 horarios: [],
                 aulas: []
             });
@@ -1327,7 +623,7 @@ function normalizarSecciones(data) {
         }
     }
 
-    return Array.from(mapa.values()).map(item => ({
+    return Array.from(mapa.values()).map((item) => ({
         ...item,
         HorarioTexto: item.horarios.length ? item.horarios.join(' | ') : 'N/D',
         AulaTexto: item.aulas.length ? item.aulas.join(' | ') : 'N/D'
@@ -1368,173 +664,17 @@ function escapeHtml(texto) {
 }
 
 /* =========================
-   MODALES DETALLE
+   EXPONER HELPERS A MÓDULOS
 ========================= */
-window.verDetalleEstudiante = function (id) {
-    const estudiantes = Array.isArray(window.__estudiantesCache) ? window.__estudiantesCache : [];
-    const est = estudiantes.find(e => Number(e.EstudianteID) === Number(id));
-    if (!est) return;
-
-    UI.openModal({
-        title: 'Detalle del estudiante',
-        body: `
-            <p><strong>ID Estudiante:</strong> ${escapeHtml(est.EstudianteID)}</p>
-            <p><strong>Carnet:</strong> ${escapeHtml(est.Carnet || 'N/D')}</p>
-            <p><strong>Estado académico:</strong> ${escapeHtml(est.EstadoAcademico || 'N/D')}</p>
-            <p><strong>Fecha de ingreso:</strong> ${escapeHtml(formatearFecha(est.FechaIngreso))}</p>
-            <hr>
-            <p><strong>ID Usuario:</strong> ${escapeHtml(est.UsuarioID || 'N/D')}</p>
-            <p><strong>Identificación:</strong> ${escapeHtml(est.Identificacion || 'N/D')}</p>
-            <p><strong>Nombre completo:</strong> ${escapeHtml(est.NombreCompleto || 'N/D')}</p>
-            <p><strong>Correo institucional:</strong> ${escapeHtml(est.CorreoInstitucional || 'N/D')}</p>
-            <p><strong>Estado usuario:</strong> ${escapeHtml(est.EstadoUsuario || 'N/D')}</p>
-            <hr>
-            <p><strong>Programa académico:</strong> ${escapeHtml(est.NombrePrograma || 'N/D')}</p>
-            <p><strong>Código programa:</strong> ${escapeHtml(est.CodigoPrograma || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetalleCurso = function (id) {
-    const cursos = Array.isArray(window.__cursosCache) ? window.__cursosCache : [];
-    const cur = cursos.find(c => Number(c.CursoID) === Number(id));
-    if (!cur) return;
-
-    UI.openModal({
-        title: 'Detalle del curso',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(cur.CursoID)}</p>
-            <p><strong>Código:</strong> ${escapeHtml(cur.CodigoCurso || 'N/D')}</p>
-            <p><strong>Nombre:</strong> ${escapeHtml(cur.NombreCurso || 'N/D')}</p>
-            <p><strong>Créditos:</strong> ${escapeHtml(cur.Creditos ?? 0)}</p>
-            <p><strong>Estado:</strong> ${escapeHtml(cur.EstadoCurso || 'N/D')}</p>
-            <p><strong>Descripción:</strong> ${escapeHtml(cur.Descripcion || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetallePeriodo = function (id) {
-    const periodos = Array.isArray(window.__periodosCache) ? window.__periodosCache : [];
-    const p = periodos.find(x => Number(x.PeriodoID) === Number(id));
-    if (!p) return;
-
-    UI.openModal({
-        title: 'Detalle del período',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(p.PeriodoID)}</p>
-            <p><strong>Nombre:</strong> ${escapeHtml(p.NombrePeriodo || 'N/D')}</p>
-            <p><strong>Tipo:</strong> ${escapeHtml(p.TipoPeriodo || 'N/D')}</p>
-            <p><strong>Año:</strong> ${escapeHtml(p.Anio ?? 'N/D')}</p>
-            <p><strong>Fecha inicio:</strong> ${escapeHtml(formatearFecha(p.FechaInicio))}</p>
-            <p><strong>Fecha fin:</strong> ${escapeHtml(formatearFecha(p.FechaFin))}</p>
-            <p><strong>Inicio matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaInicioMatricula))}</p>
-            <p><strong>Fin matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaFinMatricula))}</p>
-            <p><strong>Estado:</strong> ${escapeHtml(p.EstadoPeriodo || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetalleSeccion = function (id) {
-    const secciones = Array.isArray(window.__seccionesCache) ? window.__seccionesCache : [];
-    const s = secciones.find(x => Number(x.SeccionID) === Number(id));
-    if (!s) return;
-
-    UI.openModal({
-        title: 'Detalle de la sección',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(s.SeccionID)}</p>
-            <p><strong>Curso:</strong> ${escapeHtml(s.NombreCurso || 'N/D')}</p>
-            <p><strong>Código curso:</strong> ${escapeHtml(s.CodigoCurso || 'N/D')}</p>
-            <p><strong>Período:</strong> ${escapeHtml(construirPeriodoTexto(s))}</p>
-            <p><strong>Docente:</strong> ${escapeHtml(s.Docente || 'N/D')}</p>
-            <p><strong>Cupo máximo:</strong> ${escapeHtml(s.CupoMaximo ?? 0)}</p>
-            <p><strong>Cupo disponible:</strong> ${escapeHtml(s.CupoDisponible ?? 0)}</p>
-            <p><strong>Estado:</strong> ${escapeHtml(s.EstadoSeccion || 'N/D')}</p>
-            <p><strong>Horario:</strong> ${escapeHtml(s.HorarioTexto || 'N/D')}</p>
-            <p><strong>Aula:</strong> ${escapeHtml(s.AulaTexto || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetalleUsuario = function (id) {
-    const usuarios = Array.isArray(window.__usuariosCache) ? window.__usuariosCache : [];
-    const u = usuarios.find(x => Number(x.UsuarioID) === Number(id));
-    if (!u) return;
-
-    UI.openModal({
-        title: 'Detalle del usuario',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(u.UsuarioID)}</p>
-            <p><strong>Nombre completo:</strong> ${escapeHtml(u.NombreCompleto || 'N/D')}</p>
-            <p><strong>Correo institucional:</strong> ${escapeHtml(u.CorreoInstitucional || 'N/D')}</p>
-            <p><strong>Identificación:</strong> ${escapeHtml(u.Identificacion || 'N/D')}</p>
-            <p><strong>Rol:</strong> ${escapeHtml(u.RolSistema || 'N/D')}</p>
-            <p><strong>Estado:</strong> ${escapeHtml(u.EstadoUsuario || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetallePrograma = function (id) {
-    const programas = Array.isArray(window.__programasCache) ? window.__programasCache : [];
-    const p = programas.find(x => Number(x.ProgramaAcademicoID) === Number(id));
-    if (!p) return;
-
-    UI.openModal({
-        title: 'Detalle del programa',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(p.ProgramaAcademicoID)}</p>
-            <p><strong>Código:</strong> ${escapeHtml(p.CodigoPrograma || 'N/D')}</p>
-            <p><strong>Nombre:</strong> ${escapeHtml(p.NombrePrograma || 'N/D')}</p>
-            <p><strong>Total estudiantes:</strong> ${escapeHtml(p.TotalEstudiantes ?? 0)}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetalleFactura = function (id) {
-    const facturas = Array.isArray(window.__facturasCache) ? window.__facturasCache : [];
-    const f = facturas.find(x => Number(x.FacturaID) === Number(id));
-    if (!f) return;
-
-    UI.openModal({
-        title: 'Detalle de la factura',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(f.FacturaID)}</p>
-            <p><strong>Número:</strong> ${escapeHtml(f.NumeroFactura || 'N/D')}</p>
-            <p><strong>Estudiante:</strong> ${escapeHtml(f.NombreEstudiante || 'N/D')}</p>
-            <p><strong>Período:</strong> ${escapeHtml(f.NombrePeriodo || 'N/D')}</p>
-            <p><strong>Total:</strong> ${Helpers.formatCurrency(f.Total ?? 0)}</p>
-            <p><strong>Pagado:</strong> ${Helpers.formatCurrency(f.MontoPagado ?? 0)}</p>
-            <p><strong>Saldo pendiente:</strong> ${Helpers.formatCurrency(f.SaldoPendiente ?? 0)}</p>
-            <p><strong>Estado:</strong> ${escapeHtml(f.EstadoFactura || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
-window.verDetalleEstadoCuenta = function (id) {
-    const estados = Array.isArray(window.__estadosCuentaCache) ? window.__estadosCuentaCache : [];
-    const e = estados.find(x => Number(x.EstadoCuentaID) === Number(id));
-    if (!e) return;
-
-    UI.openModal({
-        title: 'Detalle de estado de cuenta',
-        body: `
-            <p><strong>ID:</strong> ${escapeHtml(e.EstadoCuentaID)}</p>
-            <p><strong>Factura:</strong> ${escapeHtml(e.NumeroFactura || 'N/D')}</p>
-            <p><strong>Estudiante:</strong> ${escapeHtml(e.NombreEstudiante || 'N/D')}</p>
-            <p><strong>Período:</strong> ${escapeHtml(e.NombrePeriodo || 'N/D')}</p>
-            <p><strong>Monto total:</strong> ${Helpers.formatCurrency(e.MontoTotal ?? 0)}</p>
-            <p><strong>Monto pagado:</strong> ${Helpers.formatCurrency(e.MontoPagado ?? 0)}</p>
-            <p><strong>Saldo pendiente:</strong> ${Helpers.formatCurrency(e.SaldoPendiente ?? 0)}</p>
-            <p><strong>Estado:</strong> ${escapeHtml(e.EstadoCuenta || 'N/D')}</p>
-        `,
-        hideFooter: true
-    });
-};
-
+window.setText = setText;
+window.formatearFecha = formatearFecha;
+window.construirNombrePeriodo = construirNombrePeriodo;
+window.construirPeriodoTexto = construirPeriodoTexto;
+window.getBadgeEstado = getBadgeEstado;
+window.getBadgeEstadoFactura = getBadgeEstadoFactura;
+window.getBadgeEstadoMatricula = getBadgeEstadoMatricula;
+window.getBadgeEstadoPago = getBadgeEstadoPago;
+window.getBadgeRol = getBadgeRol;
+window.normalizarSecciones = normalizarSecciones;
+window.formatearHora = formatearHora;
+window.escapeHtml = escapeHtml;

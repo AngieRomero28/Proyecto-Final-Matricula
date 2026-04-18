@@ -26,7 +26,9 @@ const obtenerAuditoria = async (filtros = {}) => {
         params.push(filtros.fechaFin);
     }
 
-    const whereClause = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+    const whereClause = condiciones.length
+        ? `WHERE ${condiciones.join(' AND ')}`
+        : '';
 
     const query = `
         SELECT
@@ -62,7 +64,9 @@ const obtenerResumenAuditoria = async () => {
 
 const registrarAuditoria = async ({ usuario, accion, descripcion, transaction = null }) => {
     if (!usuario || !accion || !descripcion) {
-        throw new Error('usuario, accion y descripcion son obligatorios para registrar auditoría');
+        const error = new Error('usuario, accion y descripcion son obligatorios para registrar auditoría');
+        error.statusCode = 400;
+        throw error;
     }
 
     const executor = transaction || (await poolPromise);
@@ -78,5 +82,5 @@ const registrarAuditoria = async ({ usuario, accion, descripcion, transaction = 
 module.exports = {
     obtenerAuditoria,
     obtenerResumenAuditoria,
-            registrarAuditoria
+    registrarAuditoria
 };

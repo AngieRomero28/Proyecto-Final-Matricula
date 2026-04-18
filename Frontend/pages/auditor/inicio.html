@@ -1,0 +1,54 @@
+<div class="page-header">
+    <div>
+        <h1>Portal de Auditoría</h1>
+        <p>Resumen general de trazabilidad y control institucional</p>
+    </div>
+</div>
+
+<div id="auditor-inicio-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Eventos auditados</div>
+        <div class="stat-value" id="auditor-total-eventos">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Usuarios con actividad</div>
+        <div class="stat-value" id="auditor-total-usuarios">0</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Consultas recientes</div>
+        <div class="stat-value" id="auditor-total-consultas">0</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Movimientos críticos</div>
+        <div class="stat-value" id="auditor-total-criticos">0</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Actividad reciente</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Descripción</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-auditor-inicio">
+                <tr>
+                    <td colspan="4">Cargando actividad...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

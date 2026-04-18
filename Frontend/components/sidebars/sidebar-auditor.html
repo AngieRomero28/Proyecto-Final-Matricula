@@ -1,0 +1,74 @@
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h2>🎓 Sistema de Matrícula</h2>
+        <span>Auditoría Institucional</span>
+    </div>
+
+    <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-user-avatar">A</div>
+        <div class="user-info">
+            <strong id="sidebar-user-name">Auditor</strong>
+            <span id="sidebar-user-role">Auditor Institucional</span>
+        </div>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-section-label">General</div>
+
+        <button class="nav-item active" data-action="dashboard">
+            <span>🏠</span>
+            <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/auditor/inicio.html"
+            data-title="Portal del Auditor"
+            data-subtitle="Vista inicial del auditor">
+            <span>📋</span>
+            <span>Inicio</span>
+        </button>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-section-label">Supervisión</div>
+
+        <button class="nav-item"
+            data-page="./pages/auditor/auditoria.html"
+            data-title="Auditoría"
+            data-subtitle="Bitácora de eventos y acciones">
+            <span>🛡️</span>
+            <span>Auditoría</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/auditor/reportes.html"
+            data-title="Reportes"
+            data-subtitle="Consultas y reportes de control">
+            <span>📊</span>
+            <span>Reportes</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/auditor/comprobantes.html"
+            data-title="Comprobantes"
+            data-subtitle="Verificación de comprobantes">
+            <span>🧾</span>
+            <span>Comprobantes</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/auditor/trazabilidad.html"
+            data-title="Trazabilidad"
+            data-subtitle="Seguimiento de operaciones del sistema">
+            <span>🔎</span>
+            <span>Trazabilidad</span>
+        </button>
+    </div>
+
+    <div class="sidebar-footer">
+        <button class="nav-item" data-action="logout">
+            <span>↩️</span>
+            <span>Cerrar sesión</span>
+        </button>
+    </div>
+</div>

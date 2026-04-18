@@ -1,0 +1,49 @@
+<div class="page-header">
+    <div>
+        <h1>Reportes del Sistema</h1>
+        <p>Visualización y exportación de información</p>
+    </div>
+</div>
+
+<div id="reportes-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Generar Reportes</h3>
+    </div>
+
+    <div class="filters-row">
+        <select id="tipo-reporte">
+            <option value="">Seleccione tipo de reporte</option>
+            <option value="matriculas">Matrículas</option>
+            <option value="pagos">Pagos</option>
+            <option value="facturas">Facturas</option>
+            <option value="estudiantes">Estudiantes</option>
+        </select>
+
+        <button class="btn btn-primary" id="btn-generar-reporte">
+            Generar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Resultados</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead id="reporte-head">
+                <tr>
+                    <th>Seleccione un reporte</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-reportes">
+                <tr>
+                    <td>No hay datos aún</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

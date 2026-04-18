@@ -1,0 +1,55 @@
+<div class="page-header">
+    <div>
+        <h1>Trazabilidad</h1>
+        <p>Seguimiento de movimientos críticos del sistema</p>
+    </div>
+</div>
+
+<div id="auditor-trazabilidad-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Registros revisados</div>
+        <div class="stat-value" id="auditor-traza-total">0</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Facturas analizadas</div>
+        <div class="stat-value" id="auditor-traza-facturas">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Pagos revisados</div>
+        <div class="stat-value" id="auditor-traza-pagos">0</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Cambios críticos</div>
+        <div class="stat-value" id="auditor-traza-criticos">0</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Movimientos trazables</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Tipo</th>
+                    <th>Referencia</th>
+                    <th>Usuario</th>
+                    <th>Fecha</th>
+                    <th>Detalle</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-auditor-trazabilidad">
+                <tr>
+                    <td colspan="5">Cargando trazabilidad...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

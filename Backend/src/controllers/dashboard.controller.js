@@ -10,9 +10,8 @@ const obtenerResumenDashboard = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerResumenDashboard:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el resumen del dashboard',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el resumen del dashboard'
         });
     }
 };

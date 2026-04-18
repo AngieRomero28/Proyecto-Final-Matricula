@@ -1,0 +1,70 @@
+<div class="page-header">
+    <div>
+        <h1>Facturas</h1>
+        <p>Consulta y control de facturación</p>
+    </div>
+</div>
+
+<div id="tesoreria-facturas-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total facturas</div>
+        <div class="stat-value" id="tesoreria-facturas-total">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Monto facturado</div>
+        <div class="stat-value" id="tesoreria-facturas-monto">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Saldo pendiente</div>
+        <div class="stat-value" id="tesoreria-facturas-pendiente">₡0.00</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <input type="text" id="filtro-tesoreria-facturas" placeholder="Buscar factura, estudiante o período...">
+
+        <select id="filtro-tesoreria-estado-factura">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Pagada">Pagada</option>
+            <option value="Parcial">Parcial</option>
+            <option value="Anulada">Anulada</option>
+        </select>
+
+        <button class="btn btn-outline" id="btn-filtrar-tesoreria-facturas">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de facturas</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Número</th>
+                    <th>Estudiante</th>
+                    <th>Período</th>
+                    <th>Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-tesoreria-facturas">
+                <tr>
+                    <td colspan="7">Cargando facturas...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -10,9 +10,8 @@ const obtenerSecciones = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerSecciones:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener las secciones',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener las secciones'
         });
     }
 };
@@ -21,13 +20,13 @@ const obtenerSeccionPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id de la sección debe ser numérico'
             });
         }
 
-        const seccion = await seccionService.obtenerSeccionPorId(id);
+        const seccion = await seccionService.obtenerSeccionPorId(Number(id));
 
         if (!seccion) {
             return res.status(404).json({
@@ -41,9 +40,8 @@ const obtenerSeccionPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerSeccionPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener la sección',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener la sección'
         });
     }
 };

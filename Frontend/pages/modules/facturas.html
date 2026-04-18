@@ -1,0 +1,73 @@
+<div class="page-header">
+    <div>
+        <h1>Facturas</h1>
+        <p>Gestión de facturación del sistema</p>
+    </div>
+</div>
+
+<div id="facturas-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total Facturas</div>
+        <div class="stat-value" id="facturas-total">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Monto Total</div>
+        <div class="stat-value" id="facturas-monto-total">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Saldo Pendiente</div>
+        <div class="stat-value" id="facturas-saldo-total">₡0.00</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+
+    <div class="filters-row">
+        <input type="text" id="filtro-factura-buscar" placeholder="Buscar factura...">
+
+        <select id="filtro-factura-estado">
+            <option value="">Todos los estados</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Pagada">Pagada</option>
+            <option value="Vencida">Vencida</option>
+        </select>
+
+        <button class="btn btn-outline" id="btn-filtrar-facturas">Filtrar</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de Facturas</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Número</th>
+                    <th>Estudiante</th>
+                    <th>Período</th>
+                    <th>Total</th>
+                    <th>Pagado</th>
+                    <th>Saldo</th>
+                    <th>Estado</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-facturas">
+                <tr>
+                    <td colspan="9">Cargando facturas...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -16,15 +16,18 @@ window.Modules.pagos = (function () {
         const btnPagar = document.getElementById('btn-pagar');
         const listaFacturas = document.getElementById('lista-facturas');
 
-        if (selectEstudiante) {
+        if (selectEstudiante && !selectEstudiante.dataset.bound) {
+            selectEstudiante.dataset.bound = 'true';
             selectEstudiante.addEventListener('change', cargarFacturas);
         }
 
-        if (btnPagar) {
+        if (btnPagar && !btnPagar.dataset.bound) {
+            btnPagar.dataset.bound = 'true';
             btnPagar.addEventListener('click', realizarPago);
         }
 
-        if (listaFacturas) {
+        if (listaFacturas && !listaFacturas.dataset.bound) {
+            listaFacturas.dataset.bound = 'true';
             listaFacturas.addEventListener('click', (event) => {
                 const item = event.target.closest('[data-factura-id]');
                 if (!item) return;
@@ -37,7 +40,7 @@ window.Modules.pagos = (function () {
 
     async function cargarEstudiantes() {
         try {
-            const res = await ApiService.obtenerEstudiantes();
+            const res = await window.ApiService.obtenerEstudiantes();
             estudiantes = Array.isArray(res.data) ? res.data : [];
 
             const select = document.getElementById('select-estudiante-pago');
@@ -63,7 +66,7 @@ window.Modules.pagos = (function () {
             await cargarFacturas();
         } catch (error) {
             console.error('Error cargando estudiantes para pagos:', error);
-            UI.showMessage(
+            window.UI.showMessage(
                 'pagos-message',
                 'danger',
                 error.message || 'No se pudieron cargar los estudiantes.'
@@ -89,7 +92,7 @@ window.Modules.pagos = (function () {
         try {
             lista.innerHTML = '<div class="matricula-empty">Cargando facturas...</div>';
 
-            const res = await ApiService.obtenerMatriculas();
+            const res = await window.ApiService.obtenerMatriculas();
             const matriculas = Array.isArray(res.data) ? res.data : [];
             const mapa = new Map();
 
@@ -151,9 +154,9 @@ window.Modules.pagos = (function () {
 
                     <div class="curso-meta">
                         <span><strong>Período:</strong> ${escapeHtml(construirNombrePeriodo(f))}</span>
-                        <span><strong>Total:</strong> ${Helpers.formatCurrency(f.MontoTotal)}</span>
-                        <span><strong>Pagado:</strong> ${Helpers.formatCurrency(f.MontoPagado)}</span>
-                        <span><strong>Saldo:</strong> ${Helpers.formatCurrency(f.SaldoPendiente)}</span>
+                        <span><strong>Total:</strong> ${window.Helpers.formatCurrency(f.MontoTotal)}</span>
+                        <span><strong>Pagado:</strong> ${window.Helpers.formatCurrency(f.MontoPagado)}</span>
+                        <span><strong>Saldo:</strong> ${window.Helpers.formatCurrency(f.SaldoPendiente)}</span>
                     </div>
                 </div>
             `;
@@ -187,12 +190,12 @@ window.Modules.pagos = (function () {
 
                 <div class="mini-card">
                     <div class="mini-card-label">Total</div>
-                    <div class="mini-card-value">${Helpers.formatCurrency(facturaSeleccionada.MontoTotal)}</div>
+                    <div class="mini-card-value">${window.Helpers.formatCurrency(facturaSeleccionada.MontoTotal)}</div>
                 </div>
 
                 <div class="mini-card">
                     <div class="mini-card-label">Saldo pendiente</div>
-                    <div class="mini-card-value">${Helpers.formatCurrency(facturaSeleccionada.SaldoPendiente)}</div>
+                    <div class="mini-card-value">${window.Helpers.formatCurrency(facturaSeleccionada.SaldoPendiente)}</div>
                 </div>
             </div>
 
@@ -209,10 +212,10 @@ window.Modules.pagos = (function () {
     }
 
     async function realizarPago() {
-        UI.clearMessage('pagos-message');
+        window.UI.clearMessage('pagos-message');
 
         if (!facturaSeleccionada) {
-            UI.showMessage('pagos-message', 'danger', 'Seleccione una factura.');
+            window.UI.showMessage('pagos-message', 'danger', 'Seleccione una factura.');
             return;
         }
 
@@ -220,17 +223,17 @@ window.Modules.pagos = (function () {
         const metodo = String(document.getElementById('metodo-pago')?.value || '').trim();
 
         if (Number.isNaN(monto) || monto <= 0) {
-            UI.showMessage('pagos-message', 'danger', 'Debe ingresar un monto válido.');
+            window.UI.showMessage('pagos-message', 'danger', 'Debe ingresar un monto válido.');
             return;
         }
 
         if (!metodo) {
-            UI.showMessage('pagos-message', 'danger', 'Debe seleccionar un método de pago.');
+            window.UI.showMessage('pagos-message', 'danger', 'Debe seleccionar un método de pago.');
             return;
         }
 
         try {
-            await ApiService.registrarPago({
+            await window.ApiService.registrarPago({
                 facturaId: facturaSeleccionada.FacturaID,
                 estudianteId: facturaSeleccionada.EstudianteID,
                 periodoId: facturaSeleccionada.PeriodoID,
@@ -239,14 +242,14 @@ window.Modules.pagos = (function () {
                 referenciaPago: `PAGO-WEB-${Date.now()}`
             });
 
-            UI.showMessage('pagos-message', 'success', 'Pago realizado correctamente.');
+            window.UI.showMessage('pagos-message', 'success', 'Pago realizado correctamente.');
 
             facturaSeleccionada = null;
             await cargarFacturas();
             renderDetalle();
         } catch (error) {
             console.error('Error registrando pago:', error);
-            UI.showMessage(
+            window.UI.showMessage(
                 'pagos-message',
                 'danger',
                 error.message || 'No se pudo registrar el pago.'

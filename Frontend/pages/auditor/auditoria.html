@@ -1,0 +1,49 @@
+<div class="page-header">
+    <div>
+        <h1>Bitácora de Auditoría</h1>
+        <p>Consulta de eventos registrados por el sistema</p>
+    </div>
+</div>
+
+<div id="auditor-auditoria-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+
+    <div class="filters-row">
+        <input type="text" id="filtro-auditor-usuario" placeholder="Buscar por usuario...">
+        <input type="text" id="filtro-auditor-accion" placeholder="Buscar por acción...">
+        <input type="date" id="filtro-auditor-fecha">
+
+        <button class="btn btn-outline" id="btn-filtrar-auditor-auditoria">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Eventos de auditoría</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Descripción</th>
+                    <th>Fecha</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-auditor-auditoria">
+                <tr>
+                    <td colspan="5">Cargando auditoría...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -30,6 +30,73 @@ const obtenerRoles = async (executor, usuarioId) => {
     return rows;
 };
 
+const obtenerRolPrincipal = (roles = []) => {
+    if (!Array.isArray(roles) || !roles.length) {
+        return null;
+    }
+
+    return roles[0]?.NombreRol || null;
+};
+
+const obtenerRelacionEstudiante = async (executor, usuarioId) => {
+    try {
+        const [rows] = await executor.query(
+            `
+                SELECT
+                    e.EstudianteID
+                FROM Estudiante e
+                WHERE e.UsuarioID = ?
+                LIMIT 1;
+            `,
+            [usuarioId]
+        );
+
+        return rows[0]?.EstudianteID || null;
+    } catch (error) {
+        console.warn('No se pudo obtener EstudianteID:', error.message);
+        return null;
+    }
+};
+
+const obtenerRelacionDocente = async (executor, usuarioId) => {
+    try {
+        const [rows] = await executor.query(
+            `
+                SELECT
+                    d.DocenteID
+                FROM Docente d
+                WHERE d.UsuarioID = ?
+                LIMIT 1;
+            `,
+            [usuarioId]
+        );
+
+        return rows[0]?.DocenteID || null;
+    } catch (error) {
+        console.warn('No se pudo obtener DocenteID:', error.message);
+        return null;
+    }
+};
+
+const construirSesionUsuario = async (executor, usuario) => {
+    const roles = await obtenerRoles(executor, usuario.UsuarioID);
+    const rolPrincipal = obtenerRolPrincipal(roles);
+    const estudianteId = await obtenerRelacionEstudiante(executor, usuario.UsuarioID);
+    const docenteId = await obtenerRelacionDocente(executor, usuario.UsuarioID);
+
+    return {
+        UsuarioID: usuario.UsuarioID,
+        Username: usuario.Username,
+        NombreCompleto: usuario.NombreCompleto,
+        Roles: roles,
+        RolPrincipal: rolPrincipal,
+        EstudianteID: estudianteId,
+        DocenteID: docenteId,
+        PasswordTemporal: Boolean(usuario.PasswordTemporal),
+        DebeCambiarPassword: Boolean(usuario.DebeCambiarPassword)
+    };
+};
+
 const login = async ({ username, password }) => {
     const pool = await poolPromise;
 
@@ -71,11 +138,10 @@ const login = async ({ username, password }) => {
         throw crearError('Usuario inactivo', 403);
     }
 
+    // Comparación temporal en texto plano mientras no se aplique hash real
     if (String(usuario.PasswordHash) !== passwordTexto) {
         throw crearError('Usuario o contraseña incorrectos', 401);
     }
-
-    const roles = await obtenerRoles(pool, usuario.UsuarioID);
 
     await pool.query(
         `
@@ -92,14 +158,7 @@ const login = async ({ username, password }) => {
         descripcion: `Inicio de sesión del usuario ${usuario.Username}`
     });
 
-    return {
-        UsuarioID: usuario.UsuarioID,
-        Username: usuario.Username,
-        NombreCompleto: usuario.NombreCompleto,
-        Roles: roles,
-        PasswordTemporal: Boolean(usuario.PasswordTemporal),
-        DebeCambiarPassword: Boolean(usuario.DebeCambiarPassword)
-    };
+    return await construirSesionUsuario(pool, usuario);
 };
 
 const cambiarPassword = async ({ usuarioId, actual, nueva }) => {
@@ -181,11 +240,13 @@ const cambiarPassword = async ({ usuarioId, actual, nueva }) => {
     });
 
     return {
+        UsuarioID: usuarioIdNum,
         mensaje: 'Contraseña actualizada correctamente'
     };
 };
 
 module.exports = {
     login,
-    cambiarPassword
+    cambiarPassword,
+    obtenerRoles
 };

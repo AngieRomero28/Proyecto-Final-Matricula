@@ -14,16 +14,25 @@
 
 .modal {
     width: min(560px, 95vw);
+    max-height: 90vh;
     background: var(--white);
     border-radius: 16px;
     box-shadow: var(--shadow-lg);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .modal-header,
 .modal-footer {
     padding: 18px 22px;
     border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h3 {
+    font-family: var(--font-title);
+    color: var(--navy);
+    font-size: 18px;
 }
 
 .modal-footer {
@@ -36,4 +45,5 @@
 
 .modal-body {
     padding: 22px;
+    overflow-y: auto;
 }

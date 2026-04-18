@@ -11,24 +11,25 @@ window.Modules.secciones = (function () {
     function configurarEventos() {
         const btnNueva = document.getElementById('btn-nueva-seccion');
 
-        if (btnNueva) {
+        if (btnNueva && !btnNueva.dataset.bound) {
+            btnNueva.dataset.bound = 'true';
             btnNueva.textContent = 'Actualizar listado';
-            btnNueva.onclick = manejarRecargaSecciones;
+            btnNueva.addEventListener('click', manejarRecargaSecciones);
         }
     }
 
     async function manejarRecargaSecciones() {
-        UI.clearMessage('secciones-message');
+        window.UI.clearMessage('secciones-message');
 
         try {
             await cargarSecciones();
-            UI.showMessage(
+            window.UI.showMessage(
                 'secciones-message',
                 'success',
                 'Listado de secciones actualizado correctamente.'
             );
         } catch (error) {
-            UI.showMessage(
+            window.UI.showMessage(
                 'secciones-message',
                 'danger',
                 error.message || 'No se pudo actualizar el listado.'
@@ -41,21 +42,24 @@ window.Modules.secciones = (function () {
         if (!tabla) return;
 
         try {
-            tabla.innerHTML = `<tr><td colspan="7">Cargando...</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
 
-            const response = await ApiService.obtenerSecciones();
+            const response = await window.ApiService.obtenerSecciones();
             const data = Array.isArray(response.data) ? response.data : [];
 
-            secciones = normalizarSecciones(data);
+            secciones = window.normalizarSecciones
+                ? window.normalizarSecciones(data)
+                : normalizarSeccionesLocal(data);
+
             renderTabla();
         } catch (error) {
             console.error('Error cargando secciones:', error);
-            tabla.innerHTML = `<tr><td colspan="7">Error cargando datos</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="7">Error cargando datos</td></tr>';
             throw error;
         }
     }
 
-    function normalizarSecciones(data) {
+    function normalizarSeccionesLocal(data) {
         const mapa = new Map();
 
         for (const item of data) {
@@ -69,19 +73,15 @@ window.Modules.secciones = (function () {
                     CupoMaximo: Number(item.CupoMaximo ?? 0),
                     CupoDisponible: Number(item.CupoDisponible ?? 0),
                     EstadoSeccion: item.EstadoSeccion ?? '',
-
                     CursoID: item.CursoID ?? null,
                     CodigoCurso: item.CodigoCurso ?? '',
                     NombreCurso: item.NombreCurso ?? '',
-
                     PeriodoID: item.PeriodoID ?? null,
                     NombrePeriodo: item.NombrePeriodo ?? '',
                     TipoPeriodo: item.TipoPeriodo ?? '',
                     Anio: item.Anio ?? '',
-
                     DocenteID: item.DocenteID ?? null,
-                    Docente: item.Docente ?? '',
-
+                    Docente: item.Docente || item.NombreDocente || '',
                     horarios: [],
                     aulas: []
                 });
@@ -112,7 +112,7 @@ window.Modules.secciones = (function () {
         if (!tabla) return;
 
         if (!secciones.length) {
-            tabla.innerHTML = `<tr><td colspan="7">No hay secciones registradas</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="7">No hay secciones registradas</td></tr>';
             return;
         }
 
@@ -133,7 +133,7 @@ window.Modules.secciones = (function () {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-outline" onclick="Modules.secciones.ver(${Number(s.SeccionID)})">
+                        <button class="btn btn-outline" onclick="window.Modules.secciones.ver(${Number(s.SeccionID)})">
                             Ver
                         </button>
                     </td>
@@ -146,7 +146,7 @@ window.Modules.secciones = (function () {
         const s = secciones.find((x) => Number(x.SeccionID) === Number(id));
         if (!s) return;
 
-        UI.openModal({
+        window.UI.openModal({
             title: 'Detalle de la sección',
             body: `
                 <p><strong>ID:</strong> ${escapeHtml(s.SeccionID)}</p>
@@ -165,6 +165,10 @@ window.Modules.secciones = (function () {
     }
 
     function construirPeriodoTexto(seccion) {
+        if (window.construirPeriodoTexto) {
+            return window.construirPeriodoTexto(seccion);
+        }
+
         const partes = [
             seccion.NombrePeriodo,
             seccion.TipoPeriodo,
@@ -198,9 +202,11 @@ window.Modules.secciones = (function () {
     function getBadgeEstado(estado) {
         switch (String(estado || '').toLowerCase()) {
             case 'activa':
+            case 'activo':
                 return 'badge-success';
             case 'inactiva':
             case 'cerrada':
+            case 'inactivo':
                 return 'badge-danger';
             default:
                 return 'badge-gray';

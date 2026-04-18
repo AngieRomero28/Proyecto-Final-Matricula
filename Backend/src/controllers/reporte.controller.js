@@ -10,9 +10,8 @@ const obtenerResumenReportes = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerResumenReportes:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los reportes',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los reportes'
         });
     }
 };

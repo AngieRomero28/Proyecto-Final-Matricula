@@ -1,0 +1,54 @@
+<div class="page-header">
+    <div>
+        <h1>Pagos</h1>
+        <p>Gestión y consulta de pagos registrados</p>
+    </div>
+</div>
+
+<div id="tesoreria-pagos-message"></div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <input type="text" id="filtro-tesoreria-pagos" placeholder="Buscar por estudiante, factura o referencia...">
+
+        <select id="filtro-tesoreria-estado-pago">
+            <option value="">Todos los estados</option>
+            <option value="Aplicado">Aplicado</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Rechazado">Rechazado</option>
+            <option value="Exitoso">Exitoso</option>
+        </select>
+
+        <button class="btn btn-outline" id="btn-filtrar-tesoreria-pagos">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de pagos</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Factura</th>
+                    <th>Estudiante</th>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Referencia</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-tesoreria-pagos">
+                <tr>
+                    <td colspan="8">Cargando pagos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -28,25 +28,189 @@ window.UI = {
         const container = document.getElementById(containerId);
         if (!container) return;
 
-        try {
-            const response = await fetch(path, {
-                cache: 'no-store',
-                headers: {
-                    'Accept': 'text/html'
+        const candidates = this.getComponentPathCandidates(path);
+
+        for (const candidate of candidates) {
+            try {
+                const response = await fetch(candidate, {
+                    cache: 'no-store',
+                    headers: {
+                        Accept: 'text/html'
+                    }
+                });
+
+                if (!response.ok) {
+                    continue;
                 }
-            });
 
-            if (!response.ok) {
-                throw new Error(`No se pudo cargar el componente: ${path}`);
+                const html = await response.text();
+                container.innerHTML = html;
+                return;
+            } catch (error) {
+                console.warn(`Intento fallido cargando componente desde ${candidate}:`, error);
             }
-
-            const html = await response.text();
-            container.innerHTML = html;
-        } catch (error) {
-            console.error(`Error cargando componente ${path}:`, error);
-            container.innerHTML = '';
-            throw error;
         }
+
+        const fallback = this.getInlineComponentFallback(path);
+        if (fallback) {
+            container.innerHTML = fallback;
+            console.warn(`Se usó fallback inline para el componente: ${path}`);
+            return;
+        }
+
+        container.innerHTML = '';
+        throw new Error(`No se pudo cargar el componente: ${path}`);
+    },
+
+    getComponentPathCandidates(path) {
+        const cleanPath = String(path || '').trim();
+        if (!cleanPath) return [];
+
+        const withoutDot = cleanPath.replace(/^\.\//, '');
+        const fileName = withoutDot.split('/').pop();
+
+        const candidates = [
+            cleanPath,
+            `/${withoutDot}`,
+            `./${withoutDot}`,
+            withoutDot,
+            `./assets/components/${fileName}`,
+            `/assets/components/${fileName}`,
+            `assets/components/${fileName}`,
+            `./components/${fileName}`,
+            `/components/${fileName}`,
+            `components/${fileName}`,
+            `./${fileName}`,
+            `/${fileName}`,
+            fileName
+        ];
+
+        return [...new Set(candidates)];
+    },
+
+    getInlineComponentFallback(path) {
+        const fileName = String(path || '').split('/').pop()?.toLowerCase();
+
+        const fallbacks = {
+            'footer.html': `
+                <footer class="app-footer">
+                    <div class="app-footer-left">
+                        <strong>Sistema de Matrícula Universitaria</strong>
+                        <span>Versión 1.0.0</span>
+                    </div>
+
+                    <div class="app-footer-right">
+                        <span>Frontend HTML · CSS · JavaScript</span>
+                    </div>
+                </footer>
+            `,
+            'loaders.html': `
+                <div id="page-loader" class="page-loader hidden">
+                    <div class="page-loader-box">
+                        <div class="page-loader-spinner"></div>
+                        <p>Cargando información...</p>
+                    </div>
+                </div>
+            `,
+            'modals.html': `
+                <div id="global-modal-overlay" class="modal-overlay">
+                    <div class="modal">
+                        <div class="modal-header">
+                            <h3 id="global-modal-title">Modal</h3>
+                            <button type="button" class="btn btn-outline" id="global-modal-close-btn">Cerrar</button>
+                        </div>
+
+                        <div class="modal-body" id="global-modal-body">
+                            Contenido del modal.
+                        </div>
+
+                        <div class="modal-footer" id="global-modal-footer">
+                            <button type="button" class="btn btn-outline" id="global-modal-cancel-btn">Cancelar</button>
+                            <button type="button" class="btn btn-primary" id="global-modal-confirm-btn">Aceptar</button>
+                        </div>
+                    </div>
+                </div>
+            `,
+            'topbar-base.html': `
+                <div class="topbar">
+                    <div class="topbar-title">
+                        <h1 id="topbar-title">Dashboard</h1>
+                        <p id="topbar-subtitle">Resumen general del sistema</p>
+                    </div>
+
+                    <div class="topbar-right">
+                        <button class="btn btn-outline" id="btn-notificaciones">
+                            🔔
+                        </button>
+
+                        <button class="btn btn-outline" id="btn-logout">
+                            Cerrar sesión
+                        </button>
+                    </div>
+                </div>
+            `,
+            'topbar.html': `
+                <div class="topbar">
+                    <div class="topbar-title">
+                        <h1 id="topbar-title">Dashboard</h1>
+                        <p id="topbar-subtitle">Resumen general del sistema</p>
+                    </div>
+
+                    <div class="topbar-right">
+                        <button class="btn btn-outline" id="btn-notificaciones">
+                            🔔
+                        </button>
+
+                        <button class="btn btn-outline" id="btn-logout">
+                            Cerrar sesión
+                        </button>
+                    </div>
+                </div>
+            `,
+            'sidebar.html': `
+                <div class="sidebar">
+                    <div class="sidebar-brand">
+                        <h2>🎓 Sistema de Matrícula</h2>
+                        <span>Universidad</span>
+                    </div>
+
+                    <div class="sidebar-user">
+                        <div class="user-avatar" id="sidebar-user-avatar">U</div>
+                        <div class="user-info">
+                            <strong id="sidebar-user-name">Usuario</strong>
+                            <span id="sidebar-user-role">Rol</span>
+                        </div>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-label">General</div>
+
+                        <button class="nav-item active" data-action="dashboard">
+                            <span>🏠</span>
+                            <span>Inicio</span>
+                        </button>
+                    </div>
+
+                    <div class="nav-section">
+                        <div class="nav-section-label">Navegación</div>
+
+                        <div class="nav-item" style="cursor: default; opacity: 0.8;">
+                            <span>ℹ️</span>
+                            <span>El menú se cargará según el rol</span>
+                        </div>
+                    </div>
+
+                    <div class="sidebar-footer">
+                        <button class="nav-item" data-action="logout">
+                            <span>↩️</span>
+                            <span>Cerrar sesión</span>
+                        </button>
+                    </div>
+                </div>
+            `
+        };
+
+        return fallbacks[fileName] || '';
     },
 
     setPageHeader(title, subtitle = '') {
@@ -55,6 +219,12 @@ window.UI = {
 
         if (pageTitle) pageTitle.textContent = title;
         if (pageSubtitle) pageSubtitle.textContent = subtitle;
+
+        const topbarTitle = document.getElementById('topbar-title');
+        const topbarSubtitle = document.getElementById('topbar-subtitle');
+
+        if (topbarTitle) topbarTitle.textContent = title;
+        if (topbarSubtitle) topbarSubtitle.textContent = subtitle;
     },
 
     openModal({

@@ -10,9 +10,8 @@ const obtenerEstadosCuenta = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerEstadosCuenta:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los estados de cuenta',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los estados de cuenta'
         });
     }
 };
@@ -21,7 +20,7 @@ const obtenerEstadoCuentaPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id del estado de cuenta debe ser numérico'
             });
@@ -41,9 +40,8 @@ const obtenerEstadoCuentaPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerEstadoCuentaPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el estado de cuenta',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el estado de cuenta'
         });
     }
 };

@@ -1,0 +1,45 @@
+<div class="page-header">
+    <div>
+        <h1>Pagos</h1>
+        <p>Pagos realizados y pendientes</p>
+    </div>
+</div>
+
+<div id="pagos-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-green">
+        <div class="stat-label">Total pagado</div>
+        <div class="stat-value" id="pagos-total">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Pendiente</div>
+        <div class="stat-value" id="pagos-pendiente">₡0.00</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Historial de pagos</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Factura</th>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-mis-pagos">
+                <tr>
+                    <td colspan="5">Cargando pagos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,82 @@
+<div class="sidebar">
+    <div class="sidebar-brand">
+        <h2>🎓 Sistema de Matrícula</h2>
+        <span>Tesorería</span>
+    </div>
+
+    <div class="sidebar-user">
+        <div class="user-avatar" id="sidebar-user-avatar">T</div>
+        <div class="user-info">
+            <strong id="sidebar-user-name">Tesorería</strong>
+            <span id="sidebar-user-role">Tesorería</span>
+        </div>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-section-label">General</div>
+
+        <button class="nav-item active" data-action="dashboard">
+            <span>🏠</span>
+            <span>Dashboard</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/tesoreria/inicio.html"
+            data-title="Tesorería"
+            data-subtitle="Resumen financiero institucional">
+            <span>📋</span>
+            <span>Inicio</span>
+        </button>
+    </div>
+
+    <div class="nav-section">
+        <div class="nav-section-label">Finanzas</div>
+
+        <button class="nav-item"
+            data-page="./pages/tesoreria/pagos.html"
+            data-title="Pagos"
+            data-subtitle="Consulta y control de pagos">
+            <span>💳</span>
+            <span>Pagos</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/tesoreria/facturas.html"
+            data-title="Facturas"
+            data-subtitle="Facturas generadas por matrícula">
+            <span>🧾</span>
+            <span>Facturas</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/tesoreria/estado-cuenta.html"
+            data-title="Estado de Cuenta"
+            data-subtitle="Control de saldos y pagos">
+            <span>📄</span>
+            <span>Estado de Cuenta</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/tesoreria/morosidad.html"
+            data-title="Morosidad"
+            data-subtitle="Estudiantes con saldos pendientes">
+            <span>⚠️</span>
+            <span>Morosidad</span>
+        </button>
+
+        <button class="nav-item"
+            data-page="./pages/tesoreria/reporte-financiero.html"
+            data-title="Reporte Financiero"
+            data-subtitle="Indicadores financieros institucionales">
+            <span>📊</span>
+            <span>Reporte Financiero</span>
+        </button>
+    </div>
+
+    <div class="sidebar-footer">
+        <button class="nav-item" data-action="logout">
+            <span>↩️</span>
+            <span>Cerrar sesión</span>
+        </button>
+    </div>
+</div>

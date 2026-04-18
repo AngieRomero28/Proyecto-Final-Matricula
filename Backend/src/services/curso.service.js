@@ -31,6 +31,11 @@ const obtenerCursos = async () => {
 
 const obtenerCursoPorId = async (id) => {
     const pool = await poolPromise;
+    const cursoId = Number(id);
+
+    if (Number.isNaN(cursoId) || cursoId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -44,7 +49,7 @@ const obtenerCursoPorId = async (id) => {
         WHERE c.CursoID = ?;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [cursoId]);
 
     if (!rows.length) {
         return null;
@@ -64,7 +69,7 @@ const obtenerCursoPorId = async (id) => {
             WHERE pr.CursoID = ?
             ORDER BY c.NombreCurso;
         `,
-        [id]
+        [cursoId]
     );
 
     const [correquisitos] = await pool.query(
@@ -79,7 +84,7 @@ const obtenerCursoPorId = async (id) => {
             WHERE cr.CursoID = ?
             ORDER BY c.NombreCurso;
         `,
-        [id]
+        [cursoId]
     );
 
     return {
@@ -91,6 +96,11 @@ const obtenerCursoPorId = async (id) => {
 
 const obtenerCursosPorPrograma = async (programaAcademicoId) => {
     const pool = await poolPromise;
+    const programaId = Number(programaAcademicoId);
+
+    if (Number.isNaN(programaId) || programaId <= 0) {
+        return [];
+    }
 
     const query = `
         SELECT DISTINCT
@@ -109,7 +119,7 @@ const obtenerCursosPorPrograma = async (programaAcademicoId) => {
         ORDER BY c.NombreCurso;
     `;
 
-    const [rows] = await pool.query(query, [programaAcademicoId]);
+    const [rows] = await pool.query(query, [programaId]);
     return rows;
 };
 

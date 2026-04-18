@@ -1,0 +1,56 @@
+<div class="page-header">
+    <div>
+        <h1>Morosidad</h1>
+        <p>Estudiantes con saldos pendientes o restricciones financieras</p>
+    </div>
+</div>
+
+<div id="tesoreria-morosidad-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-red">
+        <div class="stat-label">Casos de morosidad</div>
+        <div class="stat-value" id="tesoreria-morosidad-total">0</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Monto pendiente</div>
+        <div class="stat-value" id="tesoreria-morosidad-monto">₡0.00</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <input type="text" id="filtro-morosidad-buscar" placeholder="Buscar estudiante, carnet o motivo...">
+
+        <button class="btn btn-outline" id="btn-filtrar-morosidad">
+            Filtrar
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de estudiantes morosos</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Estudiante</th>
+                    <th>Carnet</th>
+                    <th>Monto pendiente</th>
+                    <th>Motivo</th>
+                    <th>Fecha registro</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-tesoreria-morosidad">
+                <tr>
+                    <td colspan="6">Cargando casos de morosidad...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

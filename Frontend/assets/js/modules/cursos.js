@@ -11,24 +11,25 @@ window.Modules.cursos = (function () {
     function configurarEventos() {
         const btnNuevo = document.getElementById('btn-nuevo-curso');
 
-        if (btnNuevo) {
+        if (btnNuevo && !btnNuevo.dataset.bound) {
+            btnNuevo.dataset.bound = 'true';
             btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = manejarRecargaCursos;
+            btnNuevo.addEventListener('click', manejarRecargaCursos);
         }
     }
 
     async function manejarRecargaCursos() {
-        UI.clearMessage('cursos-message');
+        window.UI.clearMessage('cursos-message');
 
         try {
             await cargarCursos();
-            UI.showMessage(
+            window.UI.showMessage(
                 'cursos-message',
                 'success',
                 'Listado de cursos actualizado correctamente.'
             );
         } catch (error) {
-            UI.showMessage(
+            window.UI.showMessage(
                 'cursos-message',
                 'danger',
                 error.message || 'No se pudo actualizar el listado.'
@@ -41,15 +42,15 @@ window.Modules.cursos = (function () {
         if (!tabla) return;
 
         try {
-            tabla.innerHTML = `<tr><td colspan="6">Cargando...</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
 
-            const response = await ApiService.obtenerCursos();
+            const response = await window.ApiService.obtenerCursos();
             cursos = Array.isArray(response.data) ? response.data : [];
 
             renderTabla();
         } catch (error) {
             console.error('Error cargando cursos:', error);
-            tabla.innerHTML = `<tr><td colspan="6">Error cargando datos</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="6">Error cargando datos</td></tr>';
             throw error;
         }
     }
@@ -59,12 +60,12 @@ window.Modules.cursos = (function () {
         if (!tabla) return;
 
         if (!cursos.length) {
-            tabla.innerHTML = `<tr><td colspan="6">No hay cursos registrados</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="6">No hay cursos registrados</td></tr>';
             return;
         }
 
         tabla.innerHTML = cursos.map((cur) => {
-            const estado = cur.EstadoCurso || 'N/D';
+            const estado = cur.EstadoCurso || cur.Estado || 'N/D';
             const badgeClass = getBadgeEstado(estado);
 
             return `
@@ -79,7 +80,7 @@ window.Modules.cursos = (function () {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-outline" onclick="Modules.cursos.ver(${Number(cur.CursoID)})">
+                        <button class="btn btn-outline" onclick="window.Modules.cursos.ver(${Number(cur.CursoID)})">
                             Ver
                         </button>
                     </td>
@@ -92,7 +93,7 @@ window.Modules.cursos = (function () {
         const cur = cursos.find((c) => Number(c.CursoID) === Number(id));
         if (!cur) return;
 
-        UI.openModal({
+        window.UI.openModal({
             title: 'Detalle del curso',
             body: `
                 <p><strong>ID:</strong> ${escapeHtml(cur.CursoID)}</p>
@@ -100,7 +101,7 @@ window.Modules.cursos = (function () {
                 <p><strong>Nombre:</strong> ${escapeHtml(cur.NombreCurso || 'N/D')}</p>
                 <p><strong>Créditos:</strong> ${escapeHtml(cur.Creditos ?? 0)}</p>
                 <p><strong>Descripción:</strong> ${escapeHtml(cur.Descripcion || 'N/D')}</p>
-                <p><strong>Estado:</strong> ${escapeHtml(cur.EstadoCurso || 'N/D')}</p>
+                <p><strong>Estado:</strong> ${escapeHtml(cur.EstadoCurso || cur.Estado || 'N/D')}</p>
             `,
             hideFooter: true
         });

@@ -1,0 +1,40 @@
+<div class="page-header">
+    <div>
+        <h1>Cursos</h1>
+        <p>Listado de cursos asignados al docente</p>
+    </div>
+</div>
+
+<div id="docente-cursos-message"></div>
+
+<div class="card mb-3">
+    <div class="filters-row">
+        <input type="text" id="filtro-docente-cursos" placeholder="Buscar curso...">
+        <button class="btn btn-outline" id="btn-filtrar-docente-cursos">Buscar</button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Cursos asignados</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Código</th>
+                    <th>Curso</th>
+                    <th>Créditos</th>
+                    <th>Secciones</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-docente-cursos">
+                <tr>
+                    <td colspan="5">Cargando cursos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

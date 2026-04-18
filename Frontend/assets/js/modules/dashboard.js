@@ -7,17 +7,10 @@ window.Modules.dashboard = (function () {
 
     async function cargarDashboard() {
         try {
-            UI.clearMessage('dashboard-message');
+            window.UI.clearMessage('dashboard-message');
 
-            const response = await ApiService.obtenerDashboardResumen();
-
-            // Soporta ambas estructuras:
-            // 1) { mensaje, data: { resumen, matriculasRecientes, ... } }
-            // 2) { resumen, matriculasRecientes, ... }
+            const response = await window.ApiService.obtenerDashboardResumen();
             const payload = response?.data ?? response ?? {};
-
-            console.log('Respuesta dashboard:', response);
-            console.log('Payload dashboard usado:', payload);
 
             renderResumen(payload.resumen || {});
             renderMatriculasRecientes(
@@ -32,7 +25,7 @@ window.Modules.dashboard = (function () {
         } catch (error) {
             console.error('Error cargando dashboard:', error);
 
-            UI.showMessage(
+            window.UI.showMessage(
                 'dashboard-message',
                 'danger',
                 error.message || 'No se pudo cargar el dashboard.'
@@ -41,26 +34,32 @@ window.Modules.dashboard = (function () {
     }
 
     function renderResumen(resumen) {
-        setText('dash-total-estudiantes', resumen.TotalEstudiantes ?? 0);
-        setText('dash-estudiantes-activos', resumen.EstudiantesActivos ?? 0);
+        setText('dash-total-estudiantes', resumen.TotalEstudiantes ?? resumen.totalEstudiantes ?? 0);
+        setText('dash-estudiantes-activos', resumen.EstudiantesActivos ?? resumen.estudiantesActivos ?? 0);
 
-        setText('dash-total-cursos', resumen.TotalCursos ?? 0);
-        setText('dash-cursos-activos', resumen.CursosActivos ?? 0);
+        setText('dash-total-cursos', resumen.TotalCursos ?? resumen.totalCursos ?? 0);
+        setText('dash-cursos-activos', resumen.CursosActivos ?? resumen.cursosActivos ?? 0);
 
-        setText('dash-total-periodos', resumen.TotalPeriodos ?? 0);
-        setText('dash-periodos-activos', resumen.PeriodosActivos ?? 0);
+        setText('dash-total-periodos', resumen.TotalPeriodos ?? resumen.totalPeriodos ?? 0);
+        setText('dash-periodos-activos', resumen.PeriodosActivos ?? resumen.periodosActivos ?? 0);
 
-        setText('dash-total-secciones', resumen.TotalSecciones ?? 0);
-        setText('dash-secciones-activas', resumen.SeccionesActivas ?? 0);
+        setText('dash-total-secciones', resumen.TotalSecciones ?? resumen.totalSecciones ?? 0);
+        setText('dash-secciones-activas', resumen.SeccionesActivas ?? resumen.seccionesActivas ?? 0);
 
-        setText('dash-total-matriculas', resumen.TotalMatriculas ?? 0);
-        setText('dash-matriculas-pendientes', resumen.MatriculasPendientes ?? 0);
-        setText('dash-matriculas-confirmadas', resumen.MatriculasConfirmadas ?? 0);
+        setText('dash-total-matriculas', resumen.TotalMatriculas ?? resumen.totalMatriculas ?? 0);
+        setText('dash-matriculas-pendientes', resumen.MatriculasPendientes ?? resumen.matriculasPendientes ?? 0);
+        setText('dash-matriculas-confirmadas', resumen.MatriculasConfirmadas ?? resumen.matriculasConfirmadas ?? 0);
 
-        setText('dash-total-pagos', resumen.TotalPagos ?? 0);
-        setText('dash-monto-recaudado', Helpers.formatCurrency(resumen.MontoRecaudado ?? 0));
-        setText('dash-facturas-pendientes', resumen.FacturasPendientes ?? 0);
-        setText('dash-saldo-pendiente-total', Helpers.formatCurrency(resumen.SaldoPendienteTotal ?? 0));
+        setText('dash-total-pagos', resumen.TotalPagos ?? resumen.totalPagos ?? 0);
+        setText(
+            'dash-monto-recaudado',
+            window.Helpers.formatCurrency(resumen.MontoRecaudado ?? resumen.montoRecaudado ?? 0)
+        );
+        setText('dash-facturas-pendientes', resumen.FacturasPendientes ?? resumen.facturasPendientes ?? 0);
+        setText(
+            'dash-saldo-pendiente-total',
+            window.Helpers.formatCurrency(resumen.SaldoPendienteTotal ?? resumen.saldoPendienteTotal ?? 0)
+        );
     }
 
     function renderMatriculasRecientes(items) {
@@ -74,14 +73,14 @@ window.Modules.dashboard = (function () {
 
         tbody.innerHTML = items.map((item) => `
             <tr>
-                <td>${item.MatriculaID ?? ''}</td>
-                <td>${escapeHtml(item.NombreEstudiante || '')}</td>
-                <td>${escapeHtml(construirNombrePeriodo(item))}</td>
-                <td>${item.CreditosTotales ?? 0}</td>
-                <td>${Helpers.formatCurrency(item.CostoTotal ?? 0)}</td>
+                <td>${escapeHtml(item.MatriculaID ?? '')}</td>
+                <td>${escapeHtml(item.NombreEstudiante || item.Estudiante || '')}</td>
+                <td>${escapeHtml(window.construirNombrePeriodo(item))}</td>
+                <td>${escapeHtml(item.CreditosTotales ?? item.Creditos ?? 0)}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.CostoTotal ?? item.MontoTotal ?? 0))}</td>
                 <td>
-                    <span class="badge ${getBadgeMatricula(item.EstadoMatricula)}">
-                        ${escapeHtml(item.EstadoMatricula || 'N/D')}
+                    <span class="badge ${getBadgeMatricula(item.EstadoMatricula || item.Estado)}">
+                        ${escapeHtml(item.EstadoMatricula || item.Estado || 'N/D')}
                     </span>
                 </td>
             </tr>
@@ -99,14 +98,14 @@ window.Modules.dashboard = (function () {
 
         tbody.innerHTML = items.map((item) => `
             <tr>
-                <td>${item.PagoID ?? ''}</td>
-                <td>${escapeHtml(item.NombreEstudiante || '')}</td>
-                <td>${escapeHtml(item.NumeroFactura || '')}</td>
-                <td>${Helpers.formatCurrency(item.MontoPago ?? 0)}</td>
-                <td>${escapeHtml(item.MetodoPago || '')}</td>
+                <td>${escapeHtml(item.PagoID ?? '')}</td>
+                <td>${escapeHtml(item.NombreEstudiante || item.Estudiante || '')}</td>
+                <td>${escapeHtml(item.NumeroFactura || item.FacturaID || '')}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.MontoPago ?? item.Monto ?? 0))}</td>
+                <td>${escapeHtml(item.MetodoPago || item.Metodo || '')}</td>
                 <td>
-                    <span class="badge ${getBadgePago(item.EstadoPago)}">
-                        ${escapeHtml(item.EstadoPago || 'N/D')}
+                    <span class="badge ${getBadgePago(item.EstadoPago || item.Estado)}">
+                        ${escapeHtml(item.EstadoPago || item.Estado || 'N/D')}
                     </span>
                 </td>
             </tr>
@@ -124,36 +123,28 @@ window.Modules.dashboard = (function () {
 
         tbody.innerHTML = items.map((item) => `
             <tr>
-                <td>${item.PeriodoID ?? ''}</td>
+                <td>${escapeHtml(item.PeriodoID ?? '')}</td>
                 <td>${escapeHtml(item.NombrePeriodo || '')}</td>
                 <td>${escapeHtml(item.TipoPeriodo || '')}</td>
-                <td>${item.Anio ?? ''}</td>
+                <td>${escapeHtml(item.Anio ?? '')}</td>
                 <td>
-                    <span class="badge ${getBadgePeriodo(item.EstadoPeriodo)}">
-                        ${escapeHtml(item.EstadoPeriodo || 'N/D')}
+                    <span class="badge ${getBadgePeriodo(item.EstadoPeriodo || item.Estado)}">
+                        ${escapeHtml(item.EstadoPeriodo || item.Estado || 'N/D')}
                     </span>
                 </td>
             </tr>
         `).join('');
     }
 
-    function construirNombrePeriodo(item) {
-        const partes = [
-            item.NombrePeriodo,
-            item.TipoPeriodo,
-            item.Anio ? `(${item.Anio})` : ''
-        ].filter(Boolean);
-
-        return partes.join(' ');
-    }
-
     function getBadgeMatricula(estado) {
-        switch (estado) {
-            case 'Confirmada':
+        switch (String(estado || '').trim().toLowerCase()) {
+            case 'confirmada':
                 return 'badge-success';
-            case 'Pendiente':
+            case 'pendiente':
+            case 'parcial':
                 return 'badge-warning';
-            case 'Anulada':
+            case 'anulada':
+            case 'cancelada':
                 return 'badge-danger';
             default:
                 return 'badge-gray';
@@ -161,13 +152,15 @@ window.Modules.dashboard = (function () {
     }
 
     function getBadgePago(estado) {
-        switch (estado) {
-            case 'Exitoso':
-            case 'Aplicado':
+        switch (String(estado || '').trim().toLowerCase()) {
+            case 'exitoso':
+            case 'aplicado':
+            case 'pagado':
                 return 'badge-success';
-            case 'Pendiente':
+            case 'pendiente':
                 return 'badge-warning';
-            case 'Rechazado':
+            case 'rechazado':
+            case 'anulado':
                 return 'badge-danger';
             default:
                 return 'badge-gray';
@@ -175,31 +168,16 @@ window.Modules.dashboard = (function () {
     }
 
     function getBadgePeriodo(estado) {
-        switch (estado) {
-            case 'Activo':
+        switch (String(estado || '').trim().toLowerCase()) {
+            case 'activo':
+            case 'vigente':
                 return 'badge-success';
-            case 'Inactivo':
-            case 'Cerrado':
+            case 'cerrado':
+            case 'inactivo':
                 return 'badge-gray';
             default:
                 return 'badge-gray';
         }
-    }
-
-    function setText(id, value) {
-        const el = document.getElementById(id);
-        if (el) {
-            el.textContent = value;
-        }
-    }
-
-    function escapeHtml(texto) {
-        return String(texto ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
     }
 
     return {

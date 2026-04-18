@@ -123,15 +123,17 @@
     z-index: 80;
 }
 
-.topbar-left h2 {
+.topbar-title h1 {
     font-family: var(--font-title);
     color: var(--navy);
     font-size: 20px;
+    margin: 0;
 }
 
-.topbar-left p {
+.topbar-title p {
     color: var(--gray-400);
     font-size: 12px;
+    margin: 2px 0 0;
 }
 
 .topbar-right {
@@ -161,6 +163,7 @@
     font-family: var(--font-title);
     color: var(--navy);
     font-size: 18px;
+    margin: 0;
 }
 
 .card-header p {
@@ -245,6 +248,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 8px;
 }
 
 .btn:hover {

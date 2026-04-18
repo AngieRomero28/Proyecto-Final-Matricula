@@ -10,9 +10,8 @@ const obtenerCursos = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerCursos:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener los cursos',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los cursos'
         });
     }
 };
@@ -21,13 +20,13 @@ const obtenerCursoPorId = async (req, res) => {
     try {
         const { id } = req.params;
 
-        if (!id || isNaN(id)) {
+        if (!id || Number.isNaN(Number(id))) {
             return res.status(400).json({
                 mensaje: 'El id del curso debe ser numérico'
             });
         }
 
-        const curso = await cursoService.obtenerCursoPorId(id);
+        const curso = await cursoService.obtenerCursoPorId(Number(id));
 
         if (!curso) {
             return res.status(404).json({
@@ -41,9 +40,8 @@ const obtenerCursoPorId = async (req, res) => {
         });
     } catch (error) {
         console.error('Error en obtenerCursoPorId:', error);
-        res.status(500).json({
-            mensaje: 'Error al obtener el curso',
-            error: error.message
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener el curso'
         });
     }
 };

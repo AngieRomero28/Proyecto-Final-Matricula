@@ -1,4 +1,5 @@
 .table-wrap {
+    width: 100%;
     overflow-x: auto;
 }
 
@@ -6,8 +7,10 @@ table {
     width: 100%;
     border-collapse: collapse;
     font-size: 13.5px;
+    background: var(--white);
 }
 
+/* HEADER */
 thead th {
     background: var(--gray-100);
     padding: 12px 14px;
@@ -20,6 +23,7 @@ thead th {
     border-bottom: 1px solid var(--gray-200);
 }
 
+/* BODY */
 tbody tr {
     border-bottom: 1px solid var(--gray-200);
     transition: 0.15s ease;
@@ -32,4 +36,66 @@ tbody tr:hover {
 tbody td {
     padding: 13px 14px;
     color: var(--gray-800);
+    vertical-align: middle;
+}
+
+/* FILA VACÍA */
+tbody tr td[colspan] {
+    text-align: center;
+    color: var(--gray-400);
+    font-size: 13px;
+    padding: 20px;
+}
+
+/* ACCIONES (botones en tabla) */
+.table-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* COLUMNAS ESPECIALES */
+.td-center {
+    text-align: center;
+}
+
+.td-right {
+    text-align: right;
+}
+
+/* ESTADOS (si no usas badges) */
+.estado {
+    font-weight: 600;
+}
+
+.estado.activo {
+    color: var(--success);
+}
+
+.estado.inactivo {
+    color: var(--danger);
+}
+
+.estado.pendiente {
+    color: var(--warning);
+}
+
+/* TABLAS DENTRO DE CARDS */
+.card table {
+    border-radius: 0;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+    table {
+        font-size: 12px;
+    }
+
+    thead th {
+        padding: 10px;
+    }
+
+    tbody td {
+        padding: 10px;
+    }
 }

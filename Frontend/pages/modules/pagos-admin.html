@@ -1,0 +1,57 @@
+<div class="page-header">
+    <div>
+        <h1>Pagos (Administración)</h1>
+        <p>Registro manual de pagos</p>
+    </div>
+</div>
+
+<div id="pagos-admin-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Registrar Pago</h3>
+    </div>
+
+    <div class="form-grid">
+        <input type="number" id="pago-factura" placeholder="ID Factura">
+        <input type="number" id="pago-estudiante" placeholder="ID Estudiante">
+        <input type="number" id="pago-periodo" placeholder="ID Período">
+        <input type="number" id="pago-monto" placeholder="Monto">
+
+        <select id="pago-metodo">
+            <option value="Tarjeta">Tarjeta</option>
+            <option value="SINPE">SINPE</option>
+            <option value="Efectivo">Efectivo</option>
+        </select>
+
+        <button class="btn btn-primary" id="btn-registrar-pago">
+            Registrar Pago
+        </button>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Pagos Registrados</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Estudiante</th>
+                    <th>Factura</th>
+                    <th>Monto</th>
+                    <th>Método</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-pagos-admin">
+                <tr>
+                    <td colspan="6">Cargando pagos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

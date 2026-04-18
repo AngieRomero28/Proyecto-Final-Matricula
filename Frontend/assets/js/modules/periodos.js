@@ -11,24 +11,25 @@ window.Modules.periodos = (function () {
     function configurarEventos() {
         const btnNuevo = document.getElementById('btn-nuevo-periodo');
 
-        if (btnNuevo) {
+        if (btnNuevo && !btnNuevo.dataset.bound) {
+            btnNuevo.dataset.bound = 'true';
             btnNuevo.textContent = 'Actualizar listado';
-            btnNuevo.onclick = manejarRecargaPeriodos;
+            btnNuevo.addEventListener('click', manejarRecargaPeriodos);
         }
     }
 
     async function manejarRecargaPeriodos() {
-        UI.clearMessage('periodos-message');
+        window.UI.clearMessage('periodos-message');
 
         try {
             await cargarPeriodos();
-            UI.showMessage(
+            window.UI.showMessage(
                 'periodos-message',
                 'success',
                 'Listado de períodos actualizado correctamente.'
             );
         } catch (error) {
-            UI.showMessage(
+            window.UI.showMessage(
                 'periodos-message',
                 'danger',
                 error.message || 'No se pudo actualizar el listado.'
@@ -41,15 +42,15 @@ window.Modules.periodos = (function () {
         if (!tabla) return;
 
         try {
-            tabla.innerHTML = `<tr><td colspan="7">Cargando...</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
 
-            const response = await ApiService.obtenerPeriodos();
+            const response = await window.ApiService.obtenerPeriodos();
             periodos = Array.isArray(response.data) ? response.data : [];
 
             renderTabla();
         } catch (error) {
             console.error('Error cargando períodos:', error);
-            tabla.innerHTML = `<tr><td colspan="7">Error cargando datos</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="7">Error cargando datos</td></tr>';
             throw error;
         }
     }
@@ -59,12 +60,12 @@ window.Modules.periodos = (function () {
         if (!tabla) return;
 
         if (!periodos.length) {
-            tabla.innerHTML = `<tr><td colspan="7">No hay períodos registrados</td></tr>`;
+            tabla.innerHTML = '<tr><td colspan="7">No hay períodos registrados</td></tr>';
             return;
         }
 
         tabla.innerHTML = periodos.map((p) => {
-            const estado = p.EstadoPeriodo || 'N/D';
+            const estado = p.EstadoPeriodo || p.Estado || 'N/D';
             const badgeClass = getBadgeEstado(estado);
 
             return `
@@ -80,7 +81,7 @@ window.Modules.periodos = (function () {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-outline" onclick="Modules.periodos.ver(${Number(p.PeriodoID)})">
+                        <button class="btn btn-outline" onclick="window.Modules.periodos.ver(${Number(p.PeriodoID)})">
                             Ver
                         </button>
                     </td>
@@ -93,7 +94,7 @@ window.Modules.periodos = (function () {
         const p = periodos.find((x) => Number(x.PeriodoID) === Number(id));
         if (!p) return;
 
-        UI.openModal({
+        window.UI.openModal({
             title: 'Detalle del período',
             body: `
                 <p><strong>ID:</strong> ${escapeHtml(p.PeriodoID)}</p>
@@ -104,7 +105,7 @@ window.Modules.periodos = (function () {
                 <p><strong>Fecha fin:</strong> ${escapeHtml(formatearFecha(p.FechaFin))}</p>
                 <p><strong>Inicio matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaInicioMatricula))}</p>
                 <p><strong>Fin matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaFinMatricula))}</p>
-                <p><strong>Estado:</strong> ${escapeHtml(p.EstadoPeriodo || 'N/D')}</p>
+                <p><strong>Estado:</strong> ${escapeHtml(p.EstadoPeriodo || p.Estado || 'N/D')}</p>
             `,
             hideFooter: true
         });

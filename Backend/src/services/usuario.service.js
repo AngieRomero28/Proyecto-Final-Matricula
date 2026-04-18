@@ -1,9 +1,15 @@
 const { poolPromise } = require('../config/db');
+const authService = require('./auth.service');
 
 const crearErrorValidacion = (mensaje, statusCode = 400) => {
     const error = new Error(mensaje);
     error.statusCode = statusCode;
     return error;
+};
+
+const validarPasswordSegura = (password) => {
+    const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$/;
+    return regex.test(password);
 };
 
 const obtenerRolesUsuario = async (executor, usuarioId) => {
@@ -78,6 +84,11 @@ const obtenerUsuarios = async () => {
 
 const obtenerUsuarioPorId = async (id) => {
     const pool = await poolPromise;
+    const usuarioId = Number(id);
+
+    if (Number.isNaN(usuarioId) || usuarioId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -97,7 +108,7 @@ const obtenerUsuarioPorId = async (id) => {
         WHERE u.UsuarioID = ?;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [usuarioId]);
 
     if (!rows.length) {
         return null;
@@ -110,99 +121,36 @@ const obtenerUsuarioPorId = async (id) => {
 };
 
 const loginUsuario = async ({ username, password }) => {
-    const pool = await poolPromise;
-
-    if (!username || !password) {
-        throw crearErrorValidacion('Debe enviar username y password');
-    }
-
-    const usernameTexto = String(username).trim();
-    const passwordTexto = String(password);
-
-    if (!usernameTexto) {
-        throw crearErrorValidacion('El username es obligatorio');
-    }
-
-    const query = `
-        SELECT
-            u.UsuarioID,
-            u.Username,
-            u.Identificacion,
-            u.Nombre,
-            u.Apellido1,
-            u.Apellido2,
-            u.NombreCompleto,
-            u.CorreoInstitucional,
-            u.Telefono,
-            u.PasswordHash,
-            u.EstadoUsuario,
-            u.FechaCreacion,
-            u.UltimoAcceso
-        FROM Usuario u
-        WHERE u.Username = ?
-        LIMIT 1;
-    `;
-
-    const [rows] = await pool.query(query, [usernameTexto]);
-
-    if (!rows.length) {
-        throw crearErrorValidacion('Usuario o contraseña incorrectos', 401);
-    }
-
-    const usuario = rows[0];
-
-    if (usuario.EstadoUsuario !== 'Activo') {
-        throw crearErrorValidacion('El usuario no se encuentra activo', 403);
-    }
-
-    // Comparación temporal en texto plano.
-    if (String(usuario.PasswordHash) !== passwordTexto) {
-        throw crearErrorValidacion('Usuario o contraseña incorrectos', 401);
-    }
-
-    await pool.query(
-        `
-            UPDATE Usuario
-            SET UltimoAcceso = CURRENT_TIMESTAMP
-            WHERE UsuarioID = ?;
-        `,
-        [usuario.UsuarioID]
-    );
-
-    const roles = await obtenerRolesUsuario(pool, usuario.UsuarioID);
-
-    const usuarioMapeado = mapearUsuario(
-        {
-            ...usuario,
-            UltimoAcceso: new Date()
-        },
-        roles
-    );
-
-    return usuarioMapeado;
+    return authService.login({ username, password });
 };
 
 const cambiarPassword = async ({ usuarioId, passwordActual, passwordNueva }) => {
     const pool = await poolPromise;
 
-    if (!usuarioId || !passwordActual || !passwordNueva) {
+    const actual = passwordActual;
+    const nueva = passwordNueva;
+
+    if (!usuarioId || !actual || !nueva) {
         throw crearErrorValidacion('Debe enviar usuarioId, passwordActual y passwordNueva');
     }
 
     const usuarioIdNum = Number(usuarioId);
 
-    if (Number.isNaN(usuarioIdNum)) {
+    if (Number.isNaN(usuarioIdNum) || usuarioIdNum <= 0) {
         throw crearErrorValidacion('El usuarioId debe ser numérico');
     }
 
-    if (String(passwordNueva).trim().length < 8) {
-        throw crearErrorValidacion('La nueva contraseña debe tener al menos 8 caracteres');
+    if (!validarPasswordSegura(String(nueva))) {
+        throw crearErrorValidacion(
+            'La contraseña debe tener mínimo 8 caracteres, una mayúscula, una minúscula, un número y un signo especial'
+        );
     }
 
     const [rows] = await pool.query(
         `
             SELECT
                 UsuarioID,
+                Username,
                 PasswordHash,
                 EstadoUsuario
             FROM Usuario
@@ -222,21 +170,24 @@ const cambiarPassword = async ({ usuarioId, passwordActual, passwordNueva }) => 
         throw crearErrorValidacion('El usuario no se encuentra activo', 403);
     }
 
-    if (String(usuario.PasswordHash) !== String(passwordActual)) {
+    if (String(usuario.PasswordHash) !== String(actual)) {
         throw crearErrorValidacion('La contraseña actual es incorrecta', 401);
     }
 
-    if (String(passwordActual) === String(passwordNueva)) {
+    if (String(actual) === String(nueva)) {
         throw crearErrorValidacion('La nueva contraseña no puede ser igual a la actual');
     }
 
     await pool.query(
         `
             UPDATE Usuario
-            SET PasswordHash = ?
+            SET
+                PasswordHash = ?,
+                PasswordTemporal = 0,
+                DebeCambiarPassword = 0
             WHERE UsuarioID = ?;
         `,
-        [String(passwordNueva), usuarioIdNum]
+        [String(nueva), usuarioIdNum]
     );
 
     return {

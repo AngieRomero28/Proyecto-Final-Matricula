@@ -1,11 +1,16 @@
 const express = require('express');
 const router = express.Router();
+
 const estudiantePortalController = require('../controllers/estudiantePortal.controller');
 const authMiddleware = require('../middlewares/auth.middleware');
 const { soloEstudiante } = require('../middlewares/role.middleware');
 const validarEstudiantePropietario = require('../middlewares/validarEstudiantePropietario.middleware');
 
-// Todas estas rutas son exclusivas del estudiante
+/**
+ * Todas estas rutas son exclusivas del estudiante autenticado
+ * y solo puede acceder a sus propios datos.
+ */
+
 router.get(
     '/:estudianteId/resumen',
     authMiddleware,

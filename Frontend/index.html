@@ -52,14 +52,14 @@
 
             <form id="login-form">
                 <div class="form-group">
-                    <label for="login-user">Correo institucional</label>
+                    <label for="login-user">Usuario institucional</label>
                     <input
                         type="text"
                         id="login-user"
                         name="login-user"
-                        placeholder="usuario@universidad.edu"
-                        value="admin@universidad.edu"
+                        placeholder="Ingrese su usuario"
                         autocomplete="username"
+                        required
                     >
                 </div>
 
@@ -70,21 +70,9 @@
                         id="login-pass"
                         name="login-pass"
                         placeholder="••••••••"
-                        value="admin"
                         autocomplete="current-password"
+                        required
                     >
-                </div>
-
-                <div class="form-group">
-                    <label for="login-role">Rol visual temporal</label>
-                    <select id="login-role" name="login-role">
-                        <option value="admin">Administrador TI</option>
-                        <option value="registro">Registro Académico</option>
-                        <option value="tesoreria">Tesorería</option>
-                        <option value="estudiante">Estudiante</option>
-                        <option value="docente">Docente</option>
-                        <option value="auditor">Auditor Institucional</option>
-                    </select>
                 </div>
 
                 <button type="submit" class="btn btn-primary btn-block">
@@ -93,7 +81,7 @@
             </form>
 
             <div class="login-note">
-                Esta pantalla es visual temporal mientras se implementa el SSO institucional real.
+                Cada usuario debe ingresar con su cuenta institucional. El acceso y la interfaz se asignan según el rol registrado en el sistema.
             </div>
 
             <div id="login-message"></div>
@@ -109,8 +97,8 @@
             <section class="page-content">
                 <div class="page-header">
                     <div>
-                        <h1 id="page-title">Dashboard</h1>
-                        <p id="page-subtitle">Resumen general del sistema</p>
+                        <h1 id="page-title">Inicio</h1>
+                        <p id="page-subtitle">Panel principal del sistema</p>
                     </div>
                     <div id="page-actions" class="page-actions"></div>
                 </div>
@@ -126,7 +114,6 @@
     <div id="loader-container"></div>
     <div id="modal-container"></div>
 
-    <!-- Base -->
     <script src="./assets/js/config.js"></script>
     <script src="./assets/js/storage.js"></script>
     <script src="./assets/js/helpers.js"></script>
@@ -134,25 +121,9 @@
     <script src="./assets/js/ui.js"></script>
     <script src="./assets/js/auth.js"></script>
     <script src="./assets/js/router.js"></script>
-
-    <!-- Modules -->
-    <script src="./assets/js/dashboard.js"></script>
-    <script src="./assets/js/usuarios.js"></script>
-    <script src="./assets/js/programas.js"></script>
-    <script src="./assets/js/reportes.js"></script>
-    <script src="./assets/js/notificaciones.js"></script>
-    <script src="./assets/js/estudiantes.js"></script>
-    <script src="./assets/js/cursos.js"></script>
-    <script src="./assets/js/periodos.js"></script>
-    <script src="./assets/js/secciones.js"></script>
-    <script src="./assets/js/matricula.js"></script>
-    <script src="./assets/js/pagos.js"></script>
-    <script src="./assets/js/facturas.js"></script>
-    <script src="./assets/js/estado-cuenta.js"></script>
-    <script src="./assets/js/comprobante.js"></script>
-    <script src="./assets/js/auditoria.js"></script>
-
-    <!-- App -->
+    <script src="./assets/js/session-user.js"></script>
+    <script src="./assets/js/access-control.js"></script>
+    <script src="./assets/js/sidebar-builder.js"></script>
     <script src="./assets/js/app.js"></script>
 </body>
 </html>

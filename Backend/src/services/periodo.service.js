@@ -15,7 +15,7 @@ const obtenerPeriodos = async () => {
             FechaFinMatricula,
             EstadoPeriodo
         FROM Periodo
-        ORDER BY Anio, PeriodoID;
+        ORDER BY Anio DESC, PeriodoID DESC;
     `;
 
     const [rows] = await pool.query(query);
@@ -24,6 +24,11 @@ const obtenerPeriodos = async () => {
 
 const obtenerPeriodoPorId = async (id) => {
     const pool = await poolPromise;
+    const periodoId = Number(id);
+
+    if (Number.isNaN(periodoId) || periodoId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -40,7 +45,7 @@ const obtenerPeriodoPorId = async (id) => {
         WHERE PeriodoID = ?;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [periodoId]);
     return rows[0] || null;
 };
 

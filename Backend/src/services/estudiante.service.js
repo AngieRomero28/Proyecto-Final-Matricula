@@ -33,6 +33,11 @@ const obtenerEstudiantes = async () => {
 
 const obtenerEstudiantePorId = async (id) => {
     const pool = await poolPromise;
+    const estudianteId = Number(id);
+
+    if (Number.isNaN(estudianteId) || estudianteId <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -58,7 +63,7 @@ const obtenerEstudiantePorId = async (id) => {
         WHERE e.EstudianteID = ?;
     `;
 
-    const [rows] = await pool.query(query, [id]);
+    const [rows] = await pool.query(query, [estudianteId]);
     return rows[0] || null;
 };
 

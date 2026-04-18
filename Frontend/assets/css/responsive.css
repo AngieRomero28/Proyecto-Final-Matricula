@@ -6,12 +6,17 @@
     .dashboard-grid {
         grid-template-columns: 1fr;
     }
+
+    .matricula-layout {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 860px) {
     .sidebar {
         position: static;
         width: 100%;
+        height: auto;
     }
 
     .system-shell {
@@ -29,6 +34,12 @@
     .page-content {
         padding: 18px;
     }
+
+    .form-row,
+    .form-row-2,
+    .form-row-3 {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 640px) {
@@ -43,5 +54,9 @@
     .page-header {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .resumen-financiero {
+        grid-template-columns: 1fr;
     }
 }
