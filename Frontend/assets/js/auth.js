@@ -20,12 +20,16 @@ window.Auth = {
             throw new Error('El usuario autenticado no tiene un rol válido para ingresar.');
         }
 
+        // Limpia cualquier sesión previa antes de guardar la nueva
+        window.StorageManager.clearSession();
         window.StorageManager.set(window.APP_CONFIG.STORAGE_KEYS.SESSION, session);
+
         return session;
     },
 
     buildSession(data = {}) {
         const roles = this.extractRoleNames(data);
+
         const primaryRoleName =
             data.RolPrincipal ||
             data.rolPrincipal ||
@@ -45,11 +49,39 @@ window.Auth = {
             data.username ||
             'Usuario';
 
+        const userId = this.toNumber(
+            data.UsuarioID ??
+            data.usuarioId ??
+            data.userId ??
+            data?.Usuario?.UsuarioID ??
+            data?.usuario?.usuarioId
+        );
+
+        const estudianteId = this.toNumber(
+            data.EstudianteID ??
+            data.estudianteId ??
+            data.studentId ??
+            data?.Estudiante?.EstudianteID ??
+            data?.estudiante?.estudianteId ??
+            data?.Usuario?.EstudianteID ??
+            data?.usuario?.estudianteId
+        );
+
+        const docenteId = this.toNumber(
+            data.DocenteID ??
+            data.docenteId ??
+            data.teacherId ??
+            data?.Docente?.DocenteID ??
+            data?.docente?.docenteId ??
+            data?.Usuario?.DocenteID ??
+            data?.usuario?.docenteId
+        );
+
         return {
-            userId: data.UsuarioID || data.usuarioId || null,
-            estudianteId: data.EstudianteID || data.estudianteId || null,
-            docenteId: data.DocenteID || data.docenteId || null,
-            username: data.Username || data.username || '',
+            userId,
+            estudianteId,
+            docenteId,
+            username: String(data.Username || data.username || '').trim(),
             fullName,
             role,
             roleLabel: this.getDisplayName(role),
@@ -81,6 +113,15 @@ window.Auth = {
             })
             .map((name) => String(name).trim())
             .filter(Boolean);
+    },
+
+    toNumber(value) {
+        if (value === null || value === undefined || value === '') {
+            return null;
+        }
+
+        const num = Number(value);
+        return Number.isNaN(num) ? null : num;
     },
 
     logout() {

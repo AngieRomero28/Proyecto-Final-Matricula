@@ -21,9 +21,9 @@ const obtenerPagos = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total AS TotalFactura,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS TotalFactura,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -87,9 +87,9 @@ const obtenerPagoPorId = async (id) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total AS TotalFactura,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS TotalFactura,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -318,6 +318,10 @@ const registrarPago = async (data) => {
             nuevoEstadoCuenta = 'Pagado';
             nuevoEstadoFactura = 'Pagada';
             nuevoEstadoMatricula = 'Confirmada';
+        } else if (nuevoMontoPagado > 0) {
+            nuevoEstadoCuenta = 'Pendiente';
+            nuevoEstadoFactura = 'Parcial';
+            nuevoEstadoMatricula = factura.EstadoMatricula || 'Pendiente';
         }
 
         await connection.query(

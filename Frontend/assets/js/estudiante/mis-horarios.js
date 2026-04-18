@@ -18,14 +18,19 @@ window.Modules.estudianteMisHorarios = (function () {
         }
 
         try {
-            const periodoActualId = await obtenerPeriodoActualId();
+            const periodoActualId = await resolverPeriodoConCursos(session.estudianteId);
+
+            if (!periodoActualId) {
+                renderTabla([]);
+                return;
+            }
 
             const response = await window.ApiService.obtenerCursosActualesEstudiante(
                 session.estudianteId,
                 periodoActualId
             );
 
-            const cursos = Array.isArray(response.data) ? response.data : [];
+            const cursos = Array.isArray(response?.data) ? response.data : [];
             renderTabla(expandirHorarios(cursos));
         } catch (error) {
             console.error('Error cargando horarios:', error);
@@ -41,50 +46,84 @@ window.Modules.estudianteMisHorarios = (function () {
         }
     }
 
-    async function obtenerPeriodoActualId() {
+    async function resolverPeriodoConCursos(estudianteId) {
         const session = window.Auth.getSession();
 
-        const candidatos = [
+        const candidatosSesion = [
             session?.periodoId,
             session?.PeriodoID,
             session?.raw?.PeriodoID,
             session?.raw?.periodoId
         ];
 
-        for (const candidato of candidatos) {
-            const num = Number(candidato);
-            if (!Number.isNaN(num) && num > 0) {
-                return num;
+        for (const candidato of candidatosSesion) {
+            const periodoId = Number(candidato);
+            if (!Number.isNaN(periodoId) && periodoId > 0) {
+                const tieneCursos = await periodoTieneCursos(estudianteId, periodoId);
+                if (tieneCursos) return periodoId;
             }
         }
 
         const response = await window.ApiService.obtenerPeriodos();
-        const periodos = Array.isArray(response.data) ? response.data : [];
+        const periodos = Array.isArray(response?.data) ? response.data : [];
 
-        const activo = periodos.find((item) => {
+        const ordenados = [...periodos].sort((a, b) => {
+            const anioA = Number(a?.Anio || 0);
+            const anioB = Number(b?.Anio || 0);
+            if (anioA !== anioB) return anioB - anioA;
+
+            const idA = Number(a?.PeriodoID || a?.periodoId || 0);
+            const idB = Number(b?.PeriodoID || b?.periodoId || 0);
+            return idB - idA;
+        });
+
+        const activos = ordenados.filter((item) => {
             const estado = String(item.EstadoPeriodo || item.estado || '').trim().toLowerCase();
             return ['activo', 'activa', 'vigente', 'abierto', 'abierta'].includes(estado);
         });
 
-        const periodoId = Number(
-            activo?.PeriodoID ??
-            activo?.periodoId ??
-            0
-        );
+        for (const item of [...activos, ...ordenados]) {
+            const periodoId = Number(item?.PeriodoID ?? item?.periodoId ?? 0);
+            if (!periodoId) continue;
 
-        if (!periodoId) {
-            throw new Error('No se encontró un período académico activo.');
+            const tieneCursos = await periodoTieneCursos(estudianteId, periodoId);
+            if (tieneCursos) return periodoId;
         }
 
-        return periodoId;
+        return null;
+    }
+
+    async function periodoTieneCursos(estudianteId, periodoId) {
+        try {
+            const response = await window.ApiService.obtenerCursosActualesEstudiante(estudianteId, periodoId);
+            const rows = Array.isArray(response?.data) ? response.data : [];
+            return rows.length > 0;
+        } catch (error) {
+            return false;
+        }
     }
 
     function expandirHorarios(cursos) {
         const filas = [];
+        const vistos = new Set();
 
         for (const item of cursos) {
+            const horarioTextoPlano = construirHorarioTexto(item);
+            const aulaTextoPlano = construirAulaTexto(item);
+
             if (Array.isArray(item.Horarios) && item.Horarios.length) {
                 item.Horarios.forEach((horario) => {
+                    const key = [
+                        item.CodigoCurso,
+                        horario.DiaSemana,
+                        horario.HoraInicio,
+                        horario.HoraFin,
+                        horario.AulaTexto || horario.NombreAula || ''
+                    ].join('|');
+
+                    if (vistos.has(key)) return;
+                    vistos.add(key);
+
                     filas.push({
                         CodigoCurso: item.CodigoCurso,
                         NombreCurso: item.NombreCurso,
@@ -93,9 +132,9 @@ window.Modules.estudianteMisHorarios = (function () {
                         HoraFin: horario.HoraFin,
                         Aula:
                             horario.Aula ||
+                            horario.AulaTexto ||
                             horario.NombreAula ||
-                            item.AulaTexto ||
-                            item.NombreAula ||
+                            aulaTextoPlano ||
                             'N/D'
                     });
                 });
@@ -104,6 +143,17 @@ window.Modules.estudianteMisHorarios = (function () {
 
             if (Array.isArray(item.horarios) && item.horarios.length) {
                 item.horarios.forEach((horario) => {
+                    const key = [
+                        item.CodigoCurso,
+                        horario.DiaSemana || horario.diaSemana,
+                        horario.HoraInicio || horario.horaInicio,
+                        horario.HoraFin || horario.horaFin,
+                        horario.Aula || horario.NombreAula || ''
+                    ].join('|');
+
+                    if (vistos.has(key)) return;
+                    vistos.add(key);
+
                     filas.push({
                         CodigoCurso: item.CodigoCurso,
                         NombreCurso: item.NombreCurso,
@@ -113,13 +163,23 @@ window.Modules.estudianteMisHorarios = (function () {
                         Aula:
                             horario.Aula ||
                             horario.NombreAula ||
-                            item.AulaTexto ||
-                            item.NombreAula ||
+                            aulaTextoPlano ||
                             'N/D'
                     });
                 });
                 continue;
             }
+
+            const key = [
+                item.CodigoCurso,
+                item.DiaSemana || '',
+                item.HoraInicio || '',
+                item.HoraFin || '',
+                aulaTextoPlano || ''
+            ].join('|');
+
+            if (vistos.has(key)) continue;
+            vistos.add(key);
 
             filas.push({
                 CodigoCurso: item.CodigoCurso,
@@ -127,7 +187,8 @@ window.Modules.estudianteMisHorarios = (function () {
                 DiaSemana: item.DiaSemana || 'N/D',
                 HoraInicio: item.HoraInicio || '',
                 HoraFin: item.HoraFin || '',
-                Aula: item.AulaTexto || item.NombreAula || 'N/D'
+                Aula: aulaTextoPlano || 'N/D',
+                HorarioTexto: horarioTextoPlano
             });
         }
 
@@ -146,15 +207,47 @@ window.Modules.estudianteMisHorarios = (function () {
         tabla.innerHTML = horarios.map((item) => `
             <tr>
                 <td>
-                    <strong>${escapeHtml(item.CodigoCurso || '')}</strong><br>
-                    ${escapeHtml(item.NombreCurso || '')}
+                    <strong>${escapeHtmlSafe(item.CodigoCurso || '')}</strong><br>
+                    ${escapeHtmlSafe(item.NombreCurso || '')}
                 </td>
-                <td>${escapeHtml(item.DiaSemana || 'N/D')}</td>
-                <td>${escapeHtml(formatearHora(item.HoraInicio || ''))}</td>
-                <td>${escapeHtml(formatearHora(item.HoraFin || ''))}</td>
-                <td>${escapeHtml(item.Aula || 'N/D')}</td>
+                <td>${escapeHtmlSafe(item.DiaSemana || 'N/D')}</td>
+                <td>${escapeHtmlSafe(formatHourSafe(item.HoraInicio || ''))}</td>
+                <td>${escapeHtmlSafe(formatHourSafe(item.HoraFin || ''))}</td>
+                <td>${escapeHtmlSafe(item.Aula || 'N/D')}</td>
             </tr>
         `).join('');
+    }
+
+    function construirHorarioTexto(item) {
+        const dia = item.DiaSemana || '';
+        const inicio = item.HoraInicio ? formatHourSafe(item.HoraInicio) : '';
+        const fin = item.HoraFin ? formatHourSafe(item.HoraFin) : '';
+
+        if (!dia && !inicio && !fin) return '';
+        if (dia && inicio && fin) return `${dia} ${inicio} - ${fin}`;
+        return [dia, inicio, fin].filter(Boolean).join(' ');
+    }
+
+    function construirAulaTexto(item) {
+        return [
+            item.CodigoAula || '',
+            item.NombreAula || '',
+            item.Ubicacion || ''
+        ].filter(Boolean).join(' - ');
+    }
+
+    function formatHourSafe(value) {
+        if (typeof window.formatearHora === 'function') {
+            return window.formatearHora(value);
+        }
+        return String(value || '');
+    }
+
+    function escapeHtmlSafe(value) {
+        if (typeof window.escapeHtml === 'function') {
+            return window.escapeHtml(value);
+        }
+        return String(value ?? '');
     }
 
     return {

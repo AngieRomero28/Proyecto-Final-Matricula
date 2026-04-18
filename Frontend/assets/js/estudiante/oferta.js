@@ -38,14 +38,21 @@ window.Modules.estudianteOferta = (function () {
         }
 
         try {
-            periodoActualId = await obtenerPeriodoActualId();
+            periodoActualId = await resolverPeriodoParaOferta(session.estudianteId);
+
+            if (!periodoActualId) {
+                oferta = [];
+                ofertaFiltrada = [];
+                renderTabla();
+                return;
+            }
 
             const response = await window.ApiService.obtenerOfertaMatriculableEstudiante(
                 session.estudianteId,
                 periodoActualId
             );
 
-            oferta = Array.isArray(response.data) ? response.data : [];
+            oferta = Array.isArray(response?.data) ? normalizarOferta(response.data) : [];
             ofertaFiltrada = [...oferta];
             renderTabla();
         } catch (error) {
@@ -62,42 +69,96 @@ window.Modules.estudianteOferta = (function () {
         }
     }
 
-    async function obtenerPeriodoActualId() {
+    async function resolverPeriodoParaOferta(estudianteId) {
         const session = window.Auth.getSession();
 
-        const candidatos = [
+        const candidatosSesion = [
             session?.periodoId,
             session?.PeriodoID,
             session?.raw?.PeriodoID,
             session?.raw?.periodoId
         ];
 
-        for (const candidato of candidatos) {
-            const num = Number(candidato);
-            if (!Number.isNaN(num) && num > 0) {
-                return num;
+        for (const candidato of candidatosSesion) {
+            const periodoId = Number(candidato);
+            if (!Number.isNaN(periodoId) && periodoId > 0) {
+                return periodoId;
             }
         }
 
         const response = await window.ApiService.obtenerPeriodos();
-        const periodos = Array.isArray(response.data) ? response.data : [];
+        const periodos = Array.isArray(response?.data) ? response.data : [];
 
-        const activo = periodos.find((item) => {
+        const ordenados = [...periodos].sort((a, b) => {
+            const anioA = Number(a?.Anio || 0);
+            const anioB = Number(b?.Anio || 0);
+            if (anioA !== anioB) return anioB - anioA;
+
+            const idA = Number(a?.PeriodoID || a?.periodoId || 0);
+            const idB = Number(b?.PeriodoID || b?.periodoId || 0);
+            return idB - idA;
+        });
+
+        const activos = ordenados.filter((item) => {
             const estado = String(item.EstadoPeriodo || item.estado || '').trim().toLowerCase();
             return ['activo', 'activa', 'vigente', 'abierto', 'abierta'].includes(estado);
         });
 
-        const periodoId = Number(
-            activo?.PeriodoID ??
-            activo?.periodoId ??
-            0
-        );
-
-        if (!periodoId) {
-            throw new Error('No se encontró un período académico activo para consultar la oferta.');
+        const primerActivo = activos[0];
+        if (primerActivo) {
+            return Number(primerActivo?.PeriodoID ?? primerActivo?.periodoId ?? 0) || null;
         }
 
-        return periodoId;
+        const primero = ordenados[0];
+        return Number(primero?.PeriodoID ?? primero?.periodoId ?? 0) || null;
+    }
+
+    function normalizarOferta(rows) {
+        const mapa = new Map();
+
+        for (const item of rows) {
+            const key = `${item.SeccionID || ''}-${item.CursoID || ''}`;
+
+            if (!mapa.has(key)) {
+                mapa.set(key, {
+                    ...item,
+                    Docente: item.Docente || item.NombreDocente || '',
+                    Horarios: Array.isArray(item.Horarios) ? [...item.Horarios] : [],
+                    HorarioTexto: item.HorarioTexto || '',
+                    AulaTexto: item.AulaTexto || ''
+                });
+            }
+
+            const curso = mapa.get(key);
+
+            const horarioTextoPlano = construirHorarioTexto(item);
+            const aulaTextoPlano = construirAulaTexto(item);
+
+            if (horarioTextoPlano) {
+                const existe = curso.Horarios.some((h) => h.HorarioTexto === horarioTextoPlano && h.AulaTexto === aulaTextoPlano);
+                if (!existe) {
+                    curso.Horarios.push({
+                        DiaSemana: item.DiaSemana || '',
+                        HoraInicio: item.HoraInicio || '',
+                        HoraFin: item.HoraFin || '',
+                        HorarioTexto: horarioTextoPlano,
+                        AulaTexto: aulaTextoPlano
+                    });
+                }
+            }
+        }
+
+        return Array.from(mapa.values()).map((curso) => {
+            if (!curso.HorarioTexto && curso.Horarios.length) {
+                curso.HorarioTexto = curso.Horarios.map((h) => h.HorarioTexto).filter(Boolean).join(' | ');
+            }
+
+            if (!curso.AulaTexto && curso.Horarios.length) {
+                curso.AulaTexto = curso.Horarios.map((h) => h.AulaTexto).filter(Boolean).join(' | ');
+            }
+
+            return curso;
+        });
     }
 
     function aplicarFiltros() {
@@ -112,11 +173,16 @@ window.Modules.estudianteOferta = (function () {
                 item.docente ||
                 '';
 
+            const horario =
+                item.HorarioTexto ||
+                '';
+
             return (
                 !texto ||
                 String(item.CodigoCurso || '').toLowerCase().includes(texto) ||
                 String(item.NombreCurso || '').toLowerCase().includes(texto) ||
-                String(docente).toLowerCase().includes(texto)
+                String(docente).toLowerCase().includes(texto) ||
+                String(horario).toLowerCase().includes(texto)
             );
         });
 
@@ -142,16 +208,21 @@ window.Modules.estudianteOferta = (function () {
 
             const seccionId = Number(item.SeccionID || 0);
 
+            const horario =
+                item.HorarioTexto ||
+                construirHorarioTexto(item) ||
+                'No definido';
+
             return `
                 <tr>
                     <td>
-                        <strong>${escapeHtml(item.CodigoCurso || '')}</strong><br>
-                        ${escapeHtml(item.NombreCurso || '')}
+                        <strong>${escapeHtmlSafe(item.CodigoCurso || '')}</strong><br>
+                        ${escapeHtmlSafe(item.NombreCurso || '')}
                     </td>
-                    <td>${escapeHtml(item.Creditos || 0)}</td>
-                    <td>${escapeHtml(docente)}</td>
-                    <td>${escapeHtml(item.HorarioTexto || construirHorarioSimple(item) || 'No definido')}</td>
-                    <td>${escapeHtml(cupos)}</td>
+                    <td>${escapeHtmlSafe(item.Creditos || 0)}</td>
+                    <td>${escapeHtmlSafe(docente)}</td>
+                    <td>${escapeHtmlSafe(horario)}</td>
+                    <td>${escapeHtmlSafe(cupos)}</td>
                     <td>
                         <button
                             class="btn ${sinCupo ? 'btn-outline' : 'btn-primary'}"
@@ -176,7 +247,11 @@ window.Modules.estudianteOferta = (function () {
 
         try {
             if (!periodoActualId) {
-                periodoActualId = await obtenerPeriodoActualId();
+                periodoActualId = await resolverPeriodoParaOferta(session.estudianteId);
+            }
+
+            if (!periodoActualId) {
+                throw new Error('No se encontró un período válido para registrar la matrícula.');
             }
 
             await window.ApiService.crearMatricula({
@@ -202,12 +277,50 @@ window.Modules.estudianteOferta = (function () {
         }
     }
 
-    function construirHorarioSimple(item) {
+    function construirHorarioTexto(item) {
+        if (Array.isArray(item.Horarios) && item.Horarios.length) {
+            const textos = item.Horarios
+                .map((h) => h.HorarioTexto || construirHorarioPlano(h))
+                .filter(Boolean);
+
+            if (textos.length) {
+                return textos.join(' | ');
+            }
+        }
+
+        return construirHorarioPlano(item);
+    }
+
+    function construirHorarioPlano(item) {
+        const dia = item.DiaSemana || '';
+        const inicio = item.HoraInicio ? formatHourSafe(item.HoraInicio) : '';
+        const fin = item.HoraFin ? formatHourSafe(item.HoraFin) : '';
+
+        if (!dia && !inicio && !fin) return '';
+        if (dia && inicio && fin) return `${dia} ${inicio} - ${fin}`;
+        return [dia, inicio, fin].filter(Boolean).join(' ');
+    }
+
+    function construirAulaTexto(item) {
         return [
-            item.DiaSemana || null,
-            item.HoraInicio ? formatearHora(item.HoraInicio) : null,
-            item.HoraFin ? formatearHora(item.HoraFin) : null
-        ].filter(Boolean).join(' ');
+            item.CodigoAula || '',
+            item.NombreAula || '',
+            item.Ubicacion || ''
+        ].filter(Boolean).join(' - ');
+    }
+
+    function formatHourSafe(value) {
+        if (typeof window.formatearHora === 'function') {
+            return window.formatearHora(value);
+        }
+        return String(value || '');
+    }
+
+    function escapeHtmlSafe(value) {
+        if (typeof window.escapeHtml === 'function') {
+            return window.escapeHtml(value);
+        }
+        return String(value ?? '');
     }
 
     return {

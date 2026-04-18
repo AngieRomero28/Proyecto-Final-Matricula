@@ -152,7 +152,10 @@ const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
                 p.PeriodoID,
                 p.NombrePeriodo,
                 p.TipoPeriodo,
-                p.Anio
+                p.Anio,
+
+                d.DocenteID,
+                udoc.NombreCompleto AS NombreDocente
             FROM Matricula m
             INNER JOIN Periodo p
                 ON m.PeriodoID = p.PeriodoID
@@ -162,6 +165,10 @@ const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
                 ON ms.SeccionID = s.SeccionID
             INNER JOIN Curso c
                 ON s.CursoID = c.CursoID
+            LEFT JOIN Docente d
+                ON s.DocenteID = d.DocenteID
+            LEFT JOIN Usuario udoc
+                ON d.UsuarioID = udoc.UsuarioID
             LEFT JOIN Seccion_Horario sh
                 ON s.SeccionID = sh.SeccionID
             LEFT JOIN Horario h
@@ -171,7 +178,10 @@ const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
             WHERE m.EstudianteID = ?
               AND m.PeriodoID = ?
               AND m.EstadoMatricula NOT IN ('Cancelada', 'Anulada')
-              AND ms.EstadoDetalle = 'Activa'
+              AND (
+                    ms.EstadoDetalle IS NULL
+                    OR ms.EstadoDetalle IN ('Activa', 'Activo')
+                  )
             ORDER BY c.NombreCurso, h.DiaSemana, h.HoraInicio;
         `,
         [estudiante.EstudianteID, periodoIdNum]
@@ -219,10 +229,11 @@ const obtenerHistorialFinanciero = async (estudianteId) => {
                 f.FacturaID,
                 f.NumeroFactura,
                 f.FechaFactura,
-                f.Subtotal,
-                f.Descuento,
-                f.Total,
-                f.EstadoFactura,
+
+                IFNULL(f.Total, 0) AS Subtotal,
+                0 AS Descuento,
+                IFNULL(f.Total, 0) AS Total,
+                IFNULL(f.EstadoFactura, 'N/D') AS EstadoFactura,
 
                 p.PeriodoID,
                 p.NombrePeriodo,
@@ -230,10 +241,10 @@ const obtenerHistorialFinanciero = async (estudianteId) => {
                 p.Anio,
 
                 ec.EstadoCuentaID,
-                ec.MontoTotal,
-                ec.MontoPagado,
-                ec.SaldoPendiente,
-                ec.EstadoCuenta,
+                IFNULL(ec.MontoTotal, f.Total, 0) AS MontoTotal,
+                IFNULL(ec.MontoPagado, 0) AS MontoPagado,
+                IFNULL(ec.SaldoPendiente, 0) AS SaldoPendiente,
+                IFNULL(ec.EstadoCuenta, 'N/D') AS EstadoCuenta,
                 ec.FechaActualizacion
             FROM Factura f
             INNER JOIN Periodo p
@@ -265,7 +276,7 @@ const obtenerPagosEstudiante = async (estudianteId) => {
 
                 f.FacturaID,
                 f.NumeroFactura,
-                f.Total,
+                IFNULL(f.Total, 0) AS Total,
 
                 p.PeriodoID,
                 p.NombrePeriodo,

@@ -57,7 +57,14 @@ const obtenerResumenDashboard = async () => {
             p.PeriodoID,
             p.NombrePeriodo,
             p.TipoPeriodo,
-            p.Anio
+            p.Anio,
+
+            f.FacturaID,
+            f.NumeroFactura,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
+            f.EstadoFactura
         FROM Matricula m
         INNER JOIN Estudiante e
             ON m.EstudianteID = e.EstudianteID
@@ -65,6 +72,8 @@ const obtenerResumenDashboard = async () => {
             ON e.UsuarioID = u.UsuarioID
         INNER JOIN Periodo p
             ON m.PeriodoID = p.PeriodoID
+        LEFT JOIN Factura f
+            ON m.FacturaID = f.FacturaID
         ORDER BY m.FechaMatricula DESC, m.MatriculaID DESC
         LIMIT 5;
     `;
@@ -79,6 +88,10 @@ const obtenerResumenDashboard = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS TotalFactura,
+            f.EstadoFactura,
 
             e.EstudianteID,
             e.Carnet,

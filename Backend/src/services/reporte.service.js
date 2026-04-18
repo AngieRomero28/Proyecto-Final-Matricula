@@ -75,7 +75,10 @@ const obtenerResumenReportes = async () => {
             ON c.CursoID = s.CursoID
         LEFT JOIN Matricula_Seccion ms
             ON s.SeccionID = ms.SeccionID
-           AND ms.EstadoDetalle = 'Activa'
+           AND (
+                ms.EstadoDetalle IS NULL
+                OR ms.EstadoDetalle IN ('Activa', 'Activo')
+           )
         GROUP BY
             c.CursoID,
             c.CodigoCurso,
@@ -114,6 +117,10 @@ const obtenerResumenReportes = async () => {
             u.CorreoInstitucional,
             f.FacturaID,
             f.NumeroFactura,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
+            f.EstadoFactura,
             p.PeriodoID,
             p.NombrePeriodo,
             p.TipoPeriodo,

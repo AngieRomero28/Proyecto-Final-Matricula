@@ -27,9 +27,9 @@ const obtenerComprobantes = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -47,7 +47,7 @@ const obtenerComprobantes = async () => {
         LEFT JOIN Factura f
             ON m.FacturaID = f.FacturaID
         LEFT JOIN Estado_Cuenta ec
-            ON m.EstadoCuentaID = ec.EstadoCuentaID
+            ON f.FacturaID = ec.FacturaID
         WHERE m.ComprobanteMatricula IS NOT NULL
           AND TRIM(m.ComprobanteMatricula) <> ''
         ORDER BY m.MatriculaID DESC;
@@ -59,6 +59,11 @@ const obtenerComprobantes = async () => {
 
 const obtenerComprobantePorMatriculaId = async (matriculaId) => {
     const pool = await poolPromise;
+    const matriculaIdNum = Number(matriculaId);
+
+    if (Number.isNaN(matriculaIdNum) || matriculaIdNum <= 0) {
+        return null;
+    }
 
     const query = `
         SELECT
@@ -84,9 +89,9 @@ const obtenerComprobantePorMatriculaId = async (matriculaId) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -104,11 +109,11 @@ const obtenerComprobantePorMatriculaId = async (matriculaId) => {
         LEFT JOIN Factura f
             ON m.FacturaID = f.FacturaID
         LEFT JOIN Estado_Cuenta ec
-            ON m.EstadoCuentaID = ec.EstadoCuentaID
+            ON f.FacturaID = ec.FacturaID
         WHERE m.MatriculaID = ?;
     `;
 
-    const [rows] = await pool.query(query, [matriculaId]);
+    const [rows] = await pool.query(query, [matriculaIdNum]);
 
     if (!rows.length) {
         return null;
@@ -151,10 +156,10 @@ const obtenerComprobantePorMatriculaId = async (matriculaId) => {
         LEFT JOIN Aula a
             ON sh.AulaID = a.AulaID
         WHERE ms.MatriculaID = ?
-        ORDER BY s.SeccionID;
+        ORDER BY s.SeccionID, h.DiaSemana, h.HoraInicio;
     `;
 
-    const [detalle] = await pool.query(detalleQuery, [matriculaId]);
+    const [detalle] = await pool.query(detalleQuery, [matriculaIdNum]);
 
     return {
         encabezado,

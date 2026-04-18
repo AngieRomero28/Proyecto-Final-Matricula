@@ -20,6 +20,58 @@ const hayChoque = (horarioA, horarioB) => {
     return inicioA < finB && inicioB < finA;
 };
 
+const formatearHora = (valor) => {
+    const texto = String(valor || '');
+    return texto.length >= 5 ? texto.slice(0, 5) : texto;
+};
+
+const construirHorarioTexto = (dia, horaInicio, horaFin) => {
+    const partes = [
+        dia ? String(dia).trim() : '',
+        horaInicio ? formatearHora(horaInicio) : '',
+        horaFin ? formatearHora(horaFin) : ''
+    ].filter(Boolean);
+
+    if (!partes.length) return '';
+    if (partes.length === 3) {
+        return `${partes[0]} ${partes[1]} - ${partes[2]}`;
+    }
+
+    return partes.join(' ');
+};
+
+const construirAulaTexto = (codigoAula, nombreAula, ubicacion) =>
+    [codigoAula, nombreAula, ubicacion]
+        .map((v) => String(v || '').trim())
+        .filter(Boolean)
+        .join(' - ');
+
+const esFechaValida = (valor) => {
+    if (!valor) return false;
+    const fecha = new Date(valor);
+    return !Number.isNaN(fecha.getTime());
+};
+
+const puedeMatricularEnPeriodo = (periodo) => {
+    if (!periodo) return true;
+
+    const inicioValido = esFechaValida(periodo.FechaInicioMatricula);
+    const finValido = esFechaValida(periodo.FechaFinMatricula);
+
+    if (!inicioValido || !finValido) {
+        return true;
+    }
+
+    const hoy = new Date();
+    const fechaInicioMatricula = new Date(periodo.FechaInicioMatricula);
+    const fechaFinMatricula = new Date(periodo.FechaFinMatricula);
+
+    fechaInicioMatricula.setHours(0, 0, 0, 0);
+    fechaFinMatricula.setHours(23, 59, 59, 999);
+
+    return hoy >= fechaInicioMatricula && hoy <= fechaFinMatricula;
+};
+
 const obtenerMatriculas = async () => {
     const pool = await poolPromise;
 
@@ -48,9 +100,9 @@ const obtenerMatriculas = async () => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -109,9 +161,9 @@ const obtenerMatriculaPorId = async (id) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -179,9 +231,9 @@ const obtenerMatriculasPorEstudiante = async (estudianteId) => {
 
             f.FacturaID,
             f.NumeroFactura,
-            f.Subtotal,
-            f.Descuento,
-            f.Total,
+            IFNULL(f.Total, 0) AS Subtotal,
+            0 AS Descuento,
+            IFNULL(f.Total, 0) AS Total,
             f.EstadoFactura,
 
             ec.EstadoCuentaID,
@@ -277,7 +329,10 @@ const obtenerOfertaMatriculablePorEstudiante = async (estudianteId, periodoId) =
             WHERE m.EstudianteID = ?
               AND m.PeriodoID = ?
               AND m.EstadoMatricula NOT IN ('Cancelada', 'Anulada')
-              AND ms.EstadoDetalle = 'Activa'
+              AND (
+                    ms.EstadoDetalle IS NULL
+                    OR ms.EstadoDetalle IN ('Activa', 'Activo')
+                  )
         `,
         [estudianteIdNum, periodoIdNum]
     );
@@ -344,13 +399,8 @@ const obtenerOfertaMatriculablePorEstudiante = async (estudianteId, periodoId) =
     const seccionesMap = new Map();
 
     for (const row of ofertaRows) {
-        if (cursosAprobados.has(Number(row.CursoID))) {
-            continue;
-        }
-
-        if (cursosMatriculados.has(Number(row.CursoID))) {
-            continue;
-        }
+        if (cursosAprobados.has(Number(row.CursoID))) continue;
+        if (cursosMatriculados.has(Number(row.CursoID))) continue;
 
         if (!seccionesMap.has(row.SeccionID)) {
             seccionesMap.set(row.SeccionID, {
@@ -370,22 +420,41 @@ const obtenerOfertaMatriculablePorEstudiante = async (estudianteId, periodoId) =
                 TipoPeriodo: row.TipoPeriodo,
                 Anio: row.Anio,
                 DocenteID: row.DocenteID,
-                NombreDocente: row.NombreDocente,
-                Horarios: []
+                Docente: row.NombreDocente || null,
+                NombreDocente: row.NombreDocente || null,
+                Horarios: [],
+                HorarioTexto: '',
+                AulaTexto: ''
             });
         }
 
         if (row.HorarioID) {
-            seccionesMap.get(row.SeccionID).Horarios.push({
-                HorarioID: row.HorarioID,
-                DiaSemana: row.DiaSemana,
-                HoraInicio: row.HoraInicio,
-                HoraFin: row.HoraFin,
-                AulaID: row.AulaID,
-                CodigoAula: row.CodigoAula,
-                NombreAula: row.NombreAula,
-                Ubicacion: row.Ubicacion
-            });
+            const horarioTexto = construirHorarioTexto(row.DiaSemana, row.HoraInicio, row.HoraFin);
+            const aulaTexto = construirAulaTexto(row.CodigoAula, row.NombreAula, row.Ubicacion);
+
+            const seccion = seccionesMap.get(row.SeccionID);
+            const yaExiste = seccion.Horarios.some(
+                (h) =>
+                    String(h.DiaSemana) === String(row.DiaSemana) &&
+                    String(h.HoraInicio) === String(row.HoraInicio) &&
+                    String(h.HoraFin) === String(row.HoraFin) &&
+                    String(h.AulaID) === String(row.AulaID)
+            );
+
+            if (!yaExiste) {
+                seccion.Horarios.push({
+                    HorarioID: row.HorarioID,
+                    DiaSemana: row.DiaSemana,
+                    HoraInicio: row.HoraInicio,
+                    HoraFin: row.HoraFin,
+                    AulaID: row.AulaID,
+                    CodigoAula: row.CodigoAula,
+                    NombreAula: row.NombreAula,
+                    Ubicacion: row.Ubicacion,
+                    HorarioTexto: horarioTexto,
+                    AulaTexto: aulaTexto
+                });
+            }
         }
     }
 
@@ -410,8 +479,23 @@ const obtenerOfertaMatriculablePorEstudiante = async (estudianteId, periodoId) =
             (pr) => !cursosAprobados.has(Number(pr.CursoPrerrequisitoID))
         );
 
-        if (faltantes.length > 0) {
-            continue;
+        if (faltantes.length > 0) continue;
+
+        if (seccion.Horarios.length > 0) {
+            seccion.HorarioTexto = seccion.Horarios
+                .map((h) => h.HorarioTexto)
+                .filter(Boolean)
+                .join(' | ');
+
+            seccion.AulaTexto = seccion.Horarios
+                .map((h) => h.AulaTexto)
+                .filter(Boolean)
+                .join(' | ');
+
+            const primerHorario = seccion.Horarios[0];
+            seccion.DiaSemana = primerHorario.DiaSemana;
+            seccion.HoraInicio = primerHorario.HoraInicio;
+            seccion.HoraFin = primerHorario.HoraFin;
         }
 
         elegibles.push(seccion);
@@ -501,17 +585,8 @@ const crearMatricula = async (data) => {
 
         const periodo = periodoRows[0];
 
-        if (periodo.FechaInicioMatricula && periodo.FechaFinMatricula) {
-            const hoy = new Date();
-            const fechaInicioMatricula = new Date(periodo.FechaInicioMatricula);
-            const fechaFinMatricula = new Date(periodo.FechaFinMatricula);
-
-            fechaInicioMatricula.setHours(0, 0, 0, 0);
-            fechaFinMatricula.setHours(23, 59, 59, 999);
-
-            if (hoy < fechaInicioMatricula || hoy > fechaFinMatricula) {
-                throw crearErrorValidacion('La matrícula no está habilitada para este periodo');
-            }
+        if (!puedeMatricularEnPeriodo(periodo)) {
+            throw crearErrorValidacion('La matrícula no está habilitada para este periodo');
         }
 
         const [bloqueoRows] = await connection.query(
@@ -653,7 +728,10 @@ const crearMatricula = async (data) => {
                 WHERE m.EstudianteID = ?
                   AND m.PeriodoID = ?
                   AND m.EstadoMatricula NOT IN ('Cancelada', 'Anulada')
-                  AND ms.EstadoDetalle = 'Activa'
+                  AND (
+                        ms.EstadoDetalle IS NULL
+                        OR ms.EstadoDetalle IN ('Activa', 'Activo')
+                      )
             `,
             [estudianteIdNum, periodoIdNum]
         );
@@ -690,7 +768,10 @@ const crearMatricula = async (data) => {
                 WHERE m.EstudianteID = ?
                   AND m.PeriodoID = ?
                   AND m.EstadoMatricula NOT IN ('Cancelada', 'Anulada')
-                  AND ms.EstadoDetalle = 'Activa'
+                  AND (
+                        ms.EstadoDetalle IS NULL
+                        OR ms.EstadoDetalle IN ('Activa', 'Activo')
+                      )
             `,
             [estudianteIdNum, periodoIdNum]
         );
@@ -871,20 +952,16 @@ const crearMatricula = async (data) => {
                     MatriculaID,
                     EstudianteID,
                     PeriodoID,
-                    Subtotal,
-                    Descuento,
                     Total,
                     EstadoFactura
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, 'Pendiente')
+                VALUES (?, ?, ?, ?, ?, 'Pendiente')
             `,
             [
                 numeroFactura,
                 matriculaId,
                 estudianteIdNum,
                 periodoIdNum,
-                subtotal,
-                descuento,
                 costoTotal
             ]
         );
