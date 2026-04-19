@@ -43,15 +43,23 @@ window.Modules.docenteMisCursos = (function () {
             const mapa = new Map();
 
             misSecciones.forEach((s) => {
-                const cursoId = Number(s.CursoID || 0);
+                const cursoId = Number(s.CursoID || s.cursoId || 0);
                 if (!cursoId) return;
 
                 if (!mapa.has(cursoId)) {
                     mapa.set(cursoId, {
                         CursoID: cursoId,
-                        CodigoCurso: s.CodigoCurso || '',
-                        NombreCurso: s.NombreCurso || '',
-                        Creditos: s.Creditos || 0,
+                        CodigoCurso: s.CodigoCurso || s.codigoCurso || '',
+                        NombreCurso: s.NombreCurso || s.nombreCurso || '',
+                        
+                        // 🔥 FIX CLAVE AQUÍ
+                        Creditos: Number(
+                            s.Creditos ??
+                            s.creditos ??
+                            s.Credito ??
+                            0
+                        ),
+
                         totalSecciones: 0
                     });
                 }
@@ -101,8 +109,8 @@ window.Modules.docenteMisCursos = (function () {
         cursosFiltrados = cursos.filter((c) => {
             return (
                 !texto ||
-                String(c.CodigoCurso || '').toLowerCase().includes(texto) ||
-                String(c.NombreCurso || '').toLowerCase().includes(texto)
+                String(c.CodigoCurso).toLowerCase().includes(texto) ||
+                String(c.NombreCurso).toLowerCase().includes(texto)
             );
         });
 
@@ -120,17 +128,17 @@ window.Modules.docenteMisCursos = (function () {
 
         tabla.innerHTML = data.map((c) => `
             <tr>
-                <td>${escapeHtml(c.CodigoCurso || '')}</td>
-                <td>${escapeHtml(c.NombreCurso || '')}</td>
-                <td>${escapeHtml(c.Creditos || 0)}</td>
-                <td>${escapeHtml(c.totalSecciones || 0)}</td>
+                <td>${escapeHtml(c.CodigoCurso)}</td>
+                <td>${escapeHtml(c.NombreCurso)}</td>
+                <td>${escapeHtml(c.Creditos)}</td>
+                <td>${escapeHtml(c.totalSecciones)}</td>
                 <td>
                     <button
                         type="button"
                         class="btn btn-outline"
                         onclick="window.UI?.openModal?.({
                             title: 'Detalle del curso',
-                            body: '<p><strong>Código:</strong> ${escapeHtml(c.CodigoCurso || '')}</p><p><strong>Curso:</strong> ${escapeHtml(c.NombreCurso || '')}</p><p><strong>Créditos:</strong> ${escapeHtml(c.Creditos || 0)}</p><p><strong>Secciones asignadas:</strong> ${escapeHtml(c.totalSecciones || 0)}</p>',
+                            body: '<p><strong>Código:</strong> ${escapeHtml(c.CodigoCurso)}</p><p><strong>Curso:</strong> ${escapeHtml(c.NombreCurso)}</p><p><strong>Créditos:</strong> ${escapeHtml(c.Creditos)}</p><p><strong>Secciones:</strong> ${escapeHtml(c.totalSecciones)}</p>',
                             showFooter: false
                         })"
                     >
