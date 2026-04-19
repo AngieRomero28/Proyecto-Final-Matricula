@@ -1086,6 +1086,7 @@ const crearMatricula = async (data) => {
 
 module.exports = {
     obtenerMatriculas,
+    obtenerEstudiantesPorSeccion,
     obtenerMatriculaPorId,
     obtenerMatriculasPorEstudiante,
     obtenerOfertaMatriculablePorEstudiante,
