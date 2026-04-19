@@ -13,6 +13,14 @@ router.get(
     matriculaController.obtenerMatriculas
 );
 
+// Obtener estudiantes matriculados por sección (docente)
+router.get(
+    '/seccion/:seccionId/estudiantes',
+    authMiddleware,
+    permitirRoles('admin', 'registro', 'docente', 'auditor'),
+    matriculaController.obtenerEstudiantesPorSeccion
+);
+
 // Obtener matrícula por ID
 router.get(
     '/:id',

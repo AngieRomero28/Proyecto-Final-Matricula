@@ -128,6 +128,50 @@ const obtenerMatriculas = async () => {
     return rows;
 };
 
+const obtenerEstudiantesPorSeccion = async (seccionId) => {
+    const pool = await poolPromise;
+    const seccionIdNum = Number(seccionId);
+
+    if (Number.isNaN(seccionIdNum) || seccionIdNum <= 0) {
+        throw crearErrorValidacion('El seccionId debe ser numérico');
+    }
+
+    const query = `
+        SELECT DISTINCT
+            e.EstudianteID,
+            e.Carnet,
+            e.EstadoAcademico,
+            u.NombreCompleto AS NombreEstudiante,
+            u.CorreoInstitucional,
+            s.SeccionID,
+            s.NumeroSeccion,
+            c.CursoID,
+            c.CodigoCurso,
+            c.NombreCurso
+        FROM Matricula_Seccion ms
+        INNER JOIN Matricula m
+            ON ms.MatriculaID = m.MatriculaID
+        INNER JOIN Estudiante e
+            ON m.EstudianteID = e.EstudianteID
+        INNER JOIN Usuario u
+            ON e.UsuarioID = u.UsuarioID
+        INNER JOIN Seccion s
+            ON ms.SeccionID = s.SeccionID
+        INNER JOIN Curso c
+            ON s.CursoID = c.CursoID
+        WHERE ms.SeccionID = ?
+          AND m.EstadoMatricula NOT IN ('Cancelada', 'Anulada')
+          AND (
+                ms.EstadoDetalle IS NULL
+                OR ms.EstadoDetalle IN ('Activa', 'Activo')
+              )
+        ORDER BY u.NombreCompleto ASC;
+    `;
+
+    const [rows] = await pool.query(query, [seccionIdNum]);
+    return rows;
+};
+
 const obtenerMatriculaPorId = async (id) => {
     const pool = await poolPromise;
     const matriculaId = Number(id);

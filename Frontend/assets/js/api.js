@@ -215,6 +215,16 @@ window.ApiService = {
         return await this.request('/matriculas');
     },
 
+    async obtenerMatriculaPorId(id) {
+        return await this.request(`/matriculas/${this.requireId('id', id)}`);
+    },
+
+    async obtenerEstudiantesPorSeccionDocente(seccionId) {
+        return await this.request(
+            `/matriculas/seccion/${this.requireId('seccionId', seccionId)}/estudiantes`
+        );
+    },
+
     async crearMatricula(body) {
         return await this.request('/matriculas', {
             method: 'POST',

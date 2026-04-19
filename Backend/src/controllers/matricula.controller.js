@@ -16,6 +16,30 @@ const obtenerMatriculas = async (req, res) => {
     }
 };
 
+const obtenerEstudiantesPorSeccion = async (req, res) => {
+    try {
+        const { seccionId } = req.params;
+
+        if (!seccionId || Number.isNaN(Number(seccionId))) {
+            return res.status(400).json({
+                mensaje: 'El seccionId debe ser numérico'
+            });
+        }
+
+        const estudiantes = await matriculaService.obtenerEstudiantesPorSeccion(Number(seccionId));
+
+        res.status(200).json({
+            mensaje: 'Estudiantes de la sección obtenidos correctamente',
+            data: estudiantes
+        });
+    } catch (error) {
+        console.error('Error en obtenerEstudiantesPorSeccion:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al obtener los estudiantes de la sección'
+        });
+    }
+};
+
 const obtenerMatriculaPorId = async (req, res) => {
     try {
         const { id } = req.params;
@@ -66,6 +90,7 @@ const crearMatricula = async (req, res) => {
 
 module.exports = {
     obtenerMatriculas,
+    obtenerEstudiantesPorSeccion,
     obtenerMatriculaPorId,
     crearMatricula
 };

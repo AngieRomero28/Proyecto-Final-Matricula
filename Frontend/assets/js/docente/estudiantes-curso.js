@@ -77,36 +77,26 @@ window.Modules.docenteEstudiantesCurso = (function () {
         }
 
         try {
-            const response = await window.ApiService.obtenerMatriculas();
-            const data = Array.isArray(response.data) ? response.data : [];
-
-            const estudiantes = data.filter((m) => {
-                const idFila = Number(
-                    m.SeccionID ??
-                    m.seccionId ??
-                    0
-                );
-
-                return idFila === seccionId;
-            });
+            const response = await window.ApiService.obtenerEstudiantesPorSeccionDocente(seccionId);
+            const estudiantes = Array.isArray(response.data) ? response.data : [];
 
             if (!estudiantes.length) {
-                tabla.innerHTML = '<tr><td colspan="4">No hay estudiantes.</td></tr>';
+                tabla.innerHTML = '<tr><td colspan="4">No hay estudiantes matriculados en esta sección.</td></tr>';
                 return;
             }
 
             tabla.innerHTML = estudiantes.map((e) => `
                 <tr>
-                    <td>${escapeHtml(e.Carnet || e.CarnetEstudiante || 'N/D')}</td>
-                    <td>${escapeHtml(e.NombreEstudiante || e.Estudiante || 'N/D')}</td>
-                    <td>${escapeHtml(e.CorreoInstitucional || e.Correo || 'N/D')}</td>
+                    <td>${escapeHtml(e.Carnet || 'N/D')}</td>
+                    <td>${escapeHtml(e.NombreEstudiante || 'N/D')}</td>
+                    <td>${escapeHtml(e.CorreoInstitucional || 'N/D')}</td>
                     <td>${escapeHtml(e.EstadoAcademico || 'N/D')}</td>
                 </tr>
             `).join('');
         } catch (error) {
             console.error('Error cargando estudiantes por sección:', error);
             if (tabla) {
-                tabla.innerHTML = '<tr><td colspan="4">Error cargando estudiantes.</td></tr>';
+                tabla.innerHTML = `<tr><td colspan="4">${escapeHtml(error.message || 'Error cargando estudiantes.')}</td></tr>`;
             }
         }
     }
