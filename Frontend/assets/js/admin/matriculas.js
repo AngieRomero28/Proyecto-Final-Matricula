@@ -1,6 +1,6 @@
 window.Modules = window.Modules || {};
 
-window.Modules.adminMatricula = (function () {
+window.Modules.adminMatriculas = (function () {
     let matriculas = [];
     let matriculasFiltradas = [];
 
@@ -146,7 +146,7 @@ window.Modules.adminMatricula = (function () {
                     <td>
                         <button
                             class="btn btn-outline"
-                            onclick="window.Modules.adminMatricula.ver(${Number(item.MatriculaID)})"
+                            onclick="window.Modules.adminMatriculas.ver(${Number(item.MatriculaID)})"
                         >
                             Ver
                         </button>
@@ -214,6 +214,15 @@ window.Modules.adminMatricula = (function () {
             default:
                 return 'badge-gray';
         }
+    }
+
+    function escapeHtml(texto) {
+        return String(texto ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     return {

@@ -1,3 +1,5 @@
+// backend/src/services/estudiantePortal.service.js
+
 const { poolPromise } = require('../config/db');
 const matriculaService = require('./matricula.service');
 
@@ -22,7 +24,7 @@ const validarEstudiante = async (executor, estudianteId) => {
                 e.Carnet,
                 e.EstadoAcademico,
                 e.ProgramaAcademicoID,
-                u.NombreCompleto,
+                CONCAT_WS(' ', u.Nombre, u.Apellido1, u.Apellido2) AS NombreCompleto,
                 u.CorreoInstitucional
             FROM Estudiante e
             INNER JOIN Usuario u
@@ -155,7 +157,7 @@ const obtenerCursosMatriculadosActuales = async (estudianteId, periodoId) => {
                 p.Anio,
 
                 d.DocenteID,
-                udoc.NombreCompleto AS NombreDocente
+                CONCAT_WS(' ', udoc.Nombre, udoc.Apellido1, udoc.Apellido2) AS NombreDocente
             FROM Matricula m
             INNER JOIN Periodo p
                 ON m.PeriodoID = p.PeriodoID

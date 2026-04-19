@@ -1,3 +1,5 @@
+// frontend/js/admin/facturas.js
+
 window.Modules = window.Modules || {};
 
 window.Modules.adminFacturas = (function () {
@@ -34,6 +36,12 @@ window.Modules.adminFacturas = (function () {
         const tabla = document.getElementById('tabla-admin-facturas');
 
         try {
+            window.UI.clearMessage('admin-facturas-message');
+
+            if (tabla) {
+                tabla.innerHTML = '<tr><td colspan="8">Cargando facturas...</td></tr>';
+            }
+
             const response = await window.ApiService.obtenerFacturas();
             facturas = Array.isArray(response.data) ? response.data : [];
             facturasFiltradas = [...facturas];
@@ -49,7 +57,7 @@ window.Modules.adminFacturas = (function () {
             );
 
             if (tabla) {
-                tabla.innerHTML = '<tr><td colspan="7">Error cargando facturas.</td></tr>';
+                tabla.innerHTML = '<tr><td colspan="8">Error cargando facturas.</td></tr>';
             }
         }
     }
@@ -71,7 +79,10 @@ window.Modules.adminFacturas = (function () {
                 String(item.NombrePeriodo || '').toLowerCase().includes(texto) ||
                 String(item.Carnet || '').toLowerCase().includes(texto);
 
-            const estadoFactura = String(item.EstadoFactura || item.Estado || '').trim().toLowerCase();
+            const estadoFactura = String(item.EstadoFactura || item.Estado || '')
+                .trim()
+                .toLowerCase();
+
             const coincideEstado = !estado || estadoFactura === estado;
 
             return coincideTexto && coincideEstado;
@@ -102,21 +113,21 @@ window.Modules.adminFacturas = (function () {
         if (!tabla) return;
 
         if (!facturasFiltradas.length) {
-            tabla.innerHTML = '<tr><td colspan="7">No hay facturas para mostrar.</td></tr>';
+            tabla.innerHTML = '<tr><td colspan="8">No hay facturas para mostrar.</td></tr>';
             return;
         }
 
         tabla.innerHTML = facturasFiltradas
             .sort((a, b) => {
-                const fechaA = new Date(a.FechaFactura || a.Fecha || 0).getTime();
-                const fechaB = new Date(b.FechaFactura || b.Fecha || 0).getTime();
+                const fechaA = new Date(a.FechaEmision || a.FechaFactura || a.Fecha || 0).getTime();
+                const fechaB = new Date(b.FechaEmision || b.FechaFactura || b.Fecha || 0).getTime();
                 return fechaB - fechaA;
             })
             .map((item) => `
                 <tr>
                     <td>${escapeHtml(item.NumeroFactura || 'N/D')}</td>
                     <td>${escapeHtml(item.NombreEstudiante || item.Estudiante || 'N/D')}</td>
-                    <td>${escapeHtml(item.NombrePeriodo || 'N/D')}</td>
+                    <td>${escapeHtml(construirPeriodo(item))}</td>
                     <td>${escapeHtml(window.Helpers.formatCurrency(item.Total || item.MontoTotal || 0))}</td>
                     <td>${escapeHtml(window.Helpers.formatCurrency(item.MontoPagado || 0))}</td>
                     <td>${escapeHtml(window.Helpers.formatCurrency(item.SaldoPendiente || 0))}</td>
@@ -125,8 +136,65 @@ window.Modules.adminFacturas = (function () {
                             ${escapeHtml(item.EstadoFactura || item.Estado || 'N/D')}
                         </span>
                     </td>
+                    <td>
+                        <button
+                            class="btn btn-outline"
+                            onclick="window.Modules.adminFacturas.verDetalle(${Number(item.FacturaID)})"
+                        >
+                            Ver
+                        </button>
+                    </td>
                 </tr>
             `).join('');
+    }
+
+    async function verDetalle(facturaId) {
+        try {
+            const response = await window.ApiService.obtenerFacturaPorId(facturaId);
+            const item = response?.data || null;
+
+            if (!item) {
+                throw new Error('No se encontró la factura.');
+            }
+
+            window.UI.openModal({
+                title: `Factura ${escapeHtml(item.NumeroFactura || item.FacturaID || '')}`,
+                body: `
+                    <p><strong>Factura:</strong> ${escapeHtml(item.NumeroFactura || 'N/D')}</p>
+                    <p><strong>Estudiante:</strong> ${escapeHtml(item.NombreEstudiante || 'N/D')}</p>
+                    <p><strong>Carnet:</strong> ${escapeHtml(item.Carnet || 'N/D')}</p>
+                    <p><strong>Período:</strong> ${escapeHtml(construirPeriodo(item))}</p>
+                    <p><strong>Fecha emisión:</strong> ${escapeHtml(formatearFecha(item.FechaEmision || item.FechaFactura || item.Fecha))}</p>
+                    <p><strong>Subtotal:</strong> ${escapeHtml(window.Helpers.formatCurrency(item.Subtotal || 0))}</p>
+                    <p><strong>Descuento:</strong> ${escapeHtml(window.Helpers.formatCurrency(item.Descuento || 0))}</p>
+                    <p><strong>Total:</strong> ${escapeHtml(window.Helpers.formatCurrency(item.Total || item.MontoTotal || 0))}</p>
+                    <p><strong>Monto pagado:</strong> ${escapeHtml(window.Helpers.formatCurrency(item.MontoPagado || 0))}</p>
+                    <p><strong>Saldo pendiente:</strong> ${escapeHtml(window.Helpers.formatCurrency(item.SaldoPendiente || 0))}</p>
+                    <p><strong>Estado factura:</strong> ${escapeHtml(item.EstadoFactura || 'N/D')}</p>
+                    <p><strong>Estado cuenta:</strong> ${escapeHtml(item.EstadoCuenta || 'N/D')}</p>
+                    <p><strong>Matrícula ID:</strong> ${escapeHtml(item.MatriculaID || 'N/D')}</p>
+                    <p><strong>Estado matrícula:</strong> ${escapeHtml(item.EstadoMatricula || 'N/D')}</p>
+                `,
+                hideFooter: true
+            });
+        } catch (error) {
+            console.error('Error obteniendo detalle de factura:', error);
+            window.UI.showMessage(
+                'admin-facturas-message',
+                'danger',
+                error.message || 'No se pudo obtener el detalle de la factura.'
+            );
+        }
+    }
+
+    function construirPeriodo(item) {
+        const partes = [
+            item.NombrePeriodo,
+            item.TipoPeriodo,
+            item.Anio ? `(${item.Anio})` : ''
+        ].filter(Boolean);
+
+        return partes.length ? partes.join(' ') : 'N/D';
     }
 
     function getBadgeEstadoFactura(estado) {
@@ -145,6 +213,15 @@ window.Modules.adminFacturas = (function () {
         }
     }
 
+    function formatearFecha(fecha) {
+        if (!fecha) return 'N/D';
+
+        const date = new Date(fecha);
+        if (Number.isNaN(date.getTime())) return 'N/D';
+
+        return date.toLocaleDateString('es-CR');
+    }
+
     function escapeHtml(texto) {
         return String(texto ?? '')
             .replace(/&/g, '&amp;')
@@ -155,6 +232,7 @@ window.Modules.adminFacturas = (function () {
     }
 
     return {
-        init
+        init,
+        verDetalle
     };
 })();

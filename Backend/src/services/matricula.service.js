@@ -144,13 +144,12 @@ const obtenerEstudiantesPorSeccion = async (seccionId) => {
 
             u.NombreCompleto AS NombreEstudiante,
             u.CorreoInstitucional,
-
-            -- 🔥 FIX FRONTEND (CLAVE)
             u.NombreCompleto AS Estudiante,
             u.CorreoInstitucional AS Correo,
 
             s.SeccionID,
             s.NumeroSeccion,
+
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso

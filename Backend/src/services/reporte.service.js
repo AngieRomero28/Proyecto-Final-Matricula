@@ -1,3 +1,5 @@
+// backend/src/services/reporte.service.js
+
 const { poolPromise } = require('../config/db');
 
 const obtenerResumenReportes = async () => {
@@ -113,23 +115,26 @@ const obtenerResumenReportes = async () => {
         SELECT
             e.EstudianteID,
             e.Carnet,
-            u.NombreCompleto,
+            CONCAT_WS(' ', u.Nombre, u.Apellido1, u.Apellido2) AS NombreCompleto,
             u.CorreoInstitucional,
+
             f.FacturaID,
             f.NumeroFactura,
             IFNULL(f.Total, 0) AS Subtotal,
             0 AS Descuento,
             IFNULL(f.Total, 0) AS Total,
             f.EstadoFactura,
+
             p.PeriodoID,
             p.NombrePeriodo,
             p.TipoPeriodo,
             p.Anio,
+
             ec.EstadoCuentaID,
-            ec.MontoTotal,
-            ec.MontoPagado,
-            ec.SaldoPendiente,
-            ec.EstadoCuenta
+            COALESCE(ec.MontoTotal, f.Total, 0) AS MontoTotal,
+            IFNULL(ec.MontoPagado, 0) AS MontoPagado,
+            IFNULL(ec.SaldoPendiente, 0) AS SaldoPendiente,
+            IFNULL(ec.EstadoCuenta, 'N/D') AS EstadoCuenta
         FROM Estado_Cuenta ec
         INNER JOIN Factura f
             ON ec.FacturaID = f.FacturaID
@@ -140,7 +145,7 @@ const obtenerResumenReportes = async () => {
         INNER JOIN Periodo p
             ON f.PeriodoID = p.PeriodoID
         WHERE ec.SaldoPendiente > 0
-        ORDER BY ec.SaldoPendiente DESC, u.NombreCompleto ASC;
+        ORDER BY ec.SaldoPendiente DESC, NombreCompleto ASC;
     `;
 
     const [resumenRows] = await pool.query(resumenQuery);

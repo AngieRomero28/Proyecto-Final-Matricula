@@ -1,3 +1,5 @@
+// backend/src/services/factura.service.js
+
 const { poolPromise } = require('../config/db');
 
 const obtenerFacturas = async () => {
@@ -17,7 +19,7 @@ const obtenerFacturas = async () => {
             e.Carnet,
 
             u.UsuarioID,
-            u.NombreCompleto AS NombreEstudiante,
+            CONCAT_WS(' ', u.Nombre, u.Apellido1, u.Apellido2) AS NombreEstudiante,
             u.CorreoInstitucional,
 
             p.PeriodoID,
@@ -26,10 +28,10 @@ const obtenerFacturas = async () => {
             p.Anio,
 
             ec.EstadoCuentaID,
-            ec.MontoTotal,
-            ec.MontoPagado,
-            ec.SaldoPendiente,
-            ec.EstadoCuenta,
+            COALESCE(ec.MontoTotal, f.Total, 0) AS MontoTotal,
+            IFNULL(ec.MontoPagado, 0) AS MontoPagado,
+            IFNULL(ec.SaldoPendiente, 0) AS SaldoPendiente,
+            IFNULL(ec.EstadoCuenta, 'N/D') AS EstadoCuenta,
 
             m.MatriculaID,
             m.EstadoMatricula,
@@ -74,7 +76,7 @@ const obtenerFacturaPorId = async (id) => {
             e.Carnet,
 
             u.UsuarioID,
-            u.NombreCompleto AS NombreEstudiante,
+            CONCAT_WS(' ', u.Nombre, u.Apellido1, u.Apellido2) AS NombreEstudiante,
             u.CorreoInstitucional,
 
             p.PeriodoID,
@@ -83,10 +85,10 @@ const obtenerFacturaPorId = async (id) => {
             p.Anio,
 
             ec.EstadoCuentaID,
-            ec.MontoTotal,
-            ec.MontoPagado,
-            ec.SaldoPendiente,
-            ec.EstadoCuenta,
+            COALESCE(ec.MontoTotal, f.Total, 0) AS MontoTotal,
+            IFNULL(ec.MontoPagado, 0) AS MontoPagado,
+            IFNULL(ec.SaldoPendiente, 0) AS SaldoPendiente,
+            IFNULL(ec.EstadoCuenta, 'N/D') AS EstadoCuenta,
 
             m.MatriculaID,
             m.EstadoMatricula,

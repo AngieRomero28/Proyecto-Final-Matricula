@@ -1,3 +1,5 @@
+// frontend/js/admin/reportes.js
+
 window.Modules = window.Modules || {};
 
 window.Modules.adminReportes = (function () {
@@ -17,6 +19,8 @@ window.Modules.adminReportes = (function () {
             renderMatriculasPorPeriodo(payload.matriculasPorPeriodo || payload.MatriculasPorPeriodo || []);
             renderPagosPorPeriodo(payload.pagosPorPeriodo || payload.PagosPorPeriodo || []);
             renderCursosMasMatriculados(payload.cursosMasMatriculados || payload.CursosMasMatriculados || []);
+            renderHistorialCostos(payload.historialCostos || payload.HistorialCostos || []);
+            renderEstudiantesMorosos(payload.estudiantesMorosos || payload.EstudiantesMorosos || []);
         } catch (error) {
             console.error('Error cargando reportes:', error);
             window.UI.showMessage(
@@ -110,6 +114,66 @@ window.Modules.adminReportes = (function () {
                 <td>${escapeHtml(item.TotalInscripciones ?? 0)}</td>
             </tr>
         `).join('');
+    }
+
+    function renderHistorialCostos(items) {
+        const tbody = document.getElementById('tabla-admin-reportes-historial-costos');
+        if (!tbody) return;
+
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="6">No hay historial de costos disponible</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = items.map((item) => `
+            <tr>
+                <td>${escapeHtml(item.TipoPeriodo || 'N/D')}</td>
+                <td>${escapeHtml(item.Anio ?? 'N/D')}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.CostoCredito ?? 0))}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.CostoMatriculaBase ?? 0))}</td>
+                <td>${escapeHtml(formatearFecha(item.FechaInicioVigencia))}</td>
+                <td>${escapeHtml(item.EstadoCosto || 'N/D')}</td>
+            </tr>
+        `).join('');
+    }
+
+    function renderEstudiantesMorosos(items) {
+        const tbody = document.getElementById('tabla-admin-reportes-morosos');
+        if (!tbody) return;
+
+        if (!items.length) {
+            tbody.innerHTML = '<tr><td colspan="6">No hay estudiantes morosos</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = items.map((item) => `
+            <tr>
+                <td>${escapeHtml(item.Carnet || 'N/D')}</td>
+                <td>${escapeHtml(item.NombreCompleto || item.NombreEstudiante || 'N/D')}</td>
+                <td>${escapeHtml(item.NumeroFactura || 'N/D')}</td>
+                <td>${escapeHtml(item.NombrePeriodo || 'N/D')}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.MontoTotal || item.Total || 0))}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.SaldoPendiente || 0))}</td>
+            </tr>
+        `).join('');
+    }
+
+    function formatearFecha(fecha) {
+        if (!fecha) return 'N/D';
+
+        const date = new Date(fecha);
+        if (Number.isNaN(date.getTime())) return 'N/D';
+
+        return date.toLocaleDateString('es-CR');
+    }
+
+    function escapeHtml(texto) {
+        return String(texto ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     return {
