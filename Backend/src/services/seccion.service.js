@@ -14,7 +14,10 @@ const obtenerSecciones = async () => {
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso,
-            c.Creditos,
+
+            -- FIX DEFINITIVO
+            c.Creditos AS Creditos,
+            c.Creditos AS creditos,
 
             p.PeriodoID,
             p.NombrePeriodo,
@@ -74,7 +77,10 @@ const obtenerSeccionPorId = async (id) => {
             c.CursoID,
             c.CodigoCurso,
             c.NombreCurso,
-            c.Creditos,
+
+            -- MISMO FIX AQUÍ TAMBIÉN
+            c.Creditos AS Creditos,
+            c.Creditos AS creditos,
 
             p.PeriodoID,
             p.NombrePeriodo,
