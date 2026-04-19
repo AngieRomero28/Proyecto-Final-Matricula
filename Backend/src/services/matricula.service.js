@@ -141,8 +141,14 @@ const obtenerEstudiantesPorSeccion = async (seccionId) => {
             e.EstudianteID,
             e.Carnet,
             e.EstadoAcademico,
+
             u.NombreCompleto AS NombreEstudiante,
             u.CorreoInstitucional,
+
+            -- 🔥 FIX FRONTEND (CLAVE)
+            u.NombreCompleto AS Estudiante,
+            u.CorreoInstitucional AS Correo,
+
             s.SeccionID,
             s.NumeroSeccion,
             c.CursoID,
