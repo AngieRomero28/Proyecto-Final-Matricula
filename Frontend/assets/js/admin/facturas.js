@@ -34,6 +34,7 @@ window.Modules.adminFacturas = (function () {
 
     async function cargarFacturas() {
         const tabla = document.getElementById('tabla-admin-facturas');
+        const tablaHistorial = document.getElementById('tabla-admin-historial-costos');
 
         try {
             window.UI.clearMessage('admin-facturas-message');
@@ -42,12 +43,26 @@ window.Modules.adminFacturas = (function () {
                 tabla.innerHTML = '<tr><td colspan="8">Cargando facturas...</td></tr>';
             }
 
-            const response = await window.ApiService.obtenerFacturas();
-            facturas = Array.isArray(response.data) ? response.data : [];
+            if (tablaHistorial) {
+                tablaHistorial.innerHTML = '<tr><td colspan="6">Cargando historial...</td></tr>';
+            }
+
+            const [facturasResponse, reportesResponse] = await Promise.all([
+                window.ApiService.obtenerFacturas(),
+                window.ApiService.obtenerResumenReportes()
+            ]);
+
+            facturas = Array.isArray(facturasResponse.data) ? facturasResponse.data : [];
             facturasFiltradas = [...facturas];
+
+            const payloadReportes = reportesResponse?.data ?? reportesResponse ?? {};
+            const historialCostos = Array.isArray(payloadReportes.historialCostos)
+                ? payloadReportes.historialCostos
+                : [];
 
             renderResumen(facturasFiltradas);
             renderTabla();
+            renderHistorialCostos(historialCostos);
         } catch (error) {
             console.error('Error cargando facturas admin:', error);
             window.UI.showMessage(
@@ -58,6 +73,10 @@ window.Modules.adminFacturas = (function () {
 
             if (tabla) {
                 tabla.innerHTML = '<tr><td colspan="8">Error cargando facturas.</td></tr>';
+            }
+
+            if (tablaHistorial) {
+                tablaHistorial.innerHTML = '<tr><td colspan="6">Error cargando historial.</td></tr>';
             }
         }
     }
@@ -137,15 +156,44 @@ window.Modules.adminFacturas = (function () {
                         </span>
                     </td>
                     <td>
-                        <button
-                            class="btn btn-outline"
-                            onclick="window.Modules.adminFacturas.verDetalle(${Number(item.FacturaID)})"
-                        >
-                            Ver
-                        </button>
+                        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                            <button
+                                class="btn btn-outline"
+                                onclick="window.Modules.adminFacturas.verDetalle(${Number(item.FacturaID)})"
+                            >
+                                Ver
+                            </button>
+                            <button
+                                class="btn btn-outline"
+                                onclick="window.Modules.adminFacturas.verHistorial(${Number(item.EstudianteID)})"
+                            >
+                                Historial
+                            </button>
+                        </div>
                     </td>
                 </tr>
             `).join('');
+    }
+
+    function renderHistorialCostos(items) {
+        const tabla = document.getElementById('tabla-admin-historial-costos');
+        if (!tabla) return;
+
+        if (!items.length) {
+            tabla.innerHTML = '<tr><td colspan="6">No hay historial de costos disponible.</td></tr>';
+            return;
+        }
+
+        tabla.innerHTML = items.map((item) => `
+            <tr>
+                <td>${escapeHtml(item.TipoPeriodo || 'N/D')}</td>
+                <td>${escapeHtml(item.Anio || 'N/D')}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.CostoCredito || 0))}</td>
+                <td>${escapeHtml(window.Helpers.formatCurrency(item.CostoMatriculaBase || 0))}</td>
+                <td>${escapeHtml(formatearFecha(item.FechaInicioVigencia))}</td>
+                <td>${escapeHtml(item.EstadoCosto || 'N/D')}</td>
+            </tr>
+        `).join('');
     }
 
     async function verDetalle(facturaId) {
@@ -183,6 +231,65 @@ window.Modules.adminFacturas = (function () {
                 'admin-facturas-message',
                 'danger',
                 error.message || 'No se pudo obtener el detalle de la factura.'
+            );
+        }
+    }
+
+    async function verHistorial(estudianteId) {
+        try {
+            const response = await window.ApiService.obtenerHistorialFinancieroEstudiante(estudianteId);
+            const historial = Array.isArray(response.data) ? response.data : [];
+
+            const filas = historial
+                .sort((a, b) => {
+                    const fechaA = new Date(a.FechaFactura || a.FechaActualizacion || 0).getTime();
+                    const fechaB = new Date(b.FechaFactura || b.FechaActualizacion || 0).getTime();
+                    return fechaB - fechaA;
+                })
+                .map((item) => `
+                    <tr>
+                        <td>${escapeHtml(item.NumeroFactura || 'N/D')}</td>
+                        <td>${escapeHtml(construirPeriodo(item))}</td>
+                        <td>${escapeHtml(window.Helpers.formatCurrency(item.Total || item.MontoTotal || 0))}</td>
+                        <td>${escapeHtml(window.Helpers.formatCurrency(item.MontoPagado || 0))}</td>
+                        <td>${escapeHtml(window.Helpers.formatCurrency(item.SaldoPendiente || 0))}</td>
+                        <td>
+                            <span class="badge ${getBadgeEstadoFactura(item.EstadoFactura || item.EstadoCuenta || 'N/D')}">
+                                ${escapeHtml(item.EstadoFactura || item.EstadoCuenta || 'N/D')}
+                            </span>
+                        </td>
+                    </tr>
+                `).join('');
+
+            window.UI.openModal({
+                title: 'Historial financiero del estudiante',
+                body: `
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Factura</th>
+                                    <th>Período</th>
+                                    <th>Total</th>
+                                    <th>Pagado</th>
+                                    <th>Saldo</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filas || '<tr><td colspan="6">No hay historial disponible.</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                `,
+                hideFooter: true
+            });
+        } catch (error) {
+            console.error('Error obteniendo historial financiero:', error);
+            window.UI.showMessage(
+                'admin-facturas-message',
+                'danger',
+                error.message || 'No se pudo cargar el historial del estudiante.'
             );
         }
     }
@@ -233,6 +340,7 @@ window.Modules.adminFacturas = (function () {
 
     return {
         init,
-        verDetalle
+        verDetalle,
+        verHistorial
     };
 })();
