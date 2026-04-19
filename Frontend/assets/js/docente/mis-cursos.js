@@ -39,7 +39,23 @@ window.Modules.docenteMisCursos = (function () {
             const response = await window.ApiService.obtenerSecciones();
             const data = Array.isArray(response.data) ? response.data : [];
 
-            const misSecciones = obtenerSeccionesDocente(data, session);
+            // 🔥 usamos normalizadas SOLO para filtrar docente
+            const normalizadas = window.normalizarSecciones
+                ? window.normalizarSecciones(data)
+                : data;
+
+            const misSecciones = obtenerSeccionesDocente(normalizadas, session);
+
+            // 🔥 función para obtener créditos reales desde data original
+            function obtenerCreditosReales(cursoId) {
+                const original = data.find(s => Number(s.CursoID) === Number(cursoId));
+                return Number(
+                    original?.Creditos ??
+                    original?.creditos ??
+                    0
+                );
+            }
+
             const mapa = new Map();
 
             misSecciones.forEach((s) => {
@@ -51,14 +67,9 @@ window.Modules.docenteMisCursos = (function () {
                         CursoID: cursoId,
                         CodigoCurso: s.CodigoCurso || s.codigoCurso || '',
                         NombreCurso: s.NombreCurso || s.nombreCurso || '',
-                        
-                        // 🔥 FIX CLAVE AQUÍ
-                        Creditos: Number(
-                            s.Creditos ??
-                            s.creditos ??
-                            s.Credito ??
-                            0
-                        ),
+
+                        // 🔥 FIX DEFINITIVO
+                        Creditos: obtenerCreditosReales(cursoId),
 
                         totalSecciones: 0
                     });
@@ -70,6 +81,7 @@ window.Modules.docenteMisCursos = (function () {
             cursos = Array.from(mapa.values());
             cursosFiltrados = [...cursos];
             renderTabla(cursosFiltrados);
+
         } catch (error) {
             console.error('Error cargando cursos docente:', error);
             if (tabla) {
@@ -79,17 +91,13 @@ window.Modules.docenteMisCursos = (function () {
     }
 
     function obtenerSeccionesDocente(data, session) {
-        const normalizadas = window.normalizarSecciones
-            ? window.normalizarSecciones(data)
-            : data;
-
         const docenteIdSesion = Number(
             session.docenteId ??
             session.userId ??
             0
         );
 
-        return normalizadas.filter((s) => {
+        return data.filter((s) => {
             const docenteIdFila = Number(
                 s.DocenteID ??
                 s.docenteId ??
