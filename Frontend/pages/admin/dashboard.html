@@ -1,0 +1,147 @@
+<div class="page-header">
+    <div>
+        <h1>Dashboard</h1>
+        <p>Resumen general del sistema universitario</p>
+    </div>
+</div>
+
+<div id="admin-dashboard-message"></div>
+
+<div class="dashboard-kpis">
+    <div class="dashboard-kpi kpi-blue">
+        <div class="dashboard-kpi-label">Estudiantes</div>
+        <div class="dashboard-kpi-value" id="admin-dash-total-estudiantes">0</div>
+        <div class="dashboard-kpi-sub">Activos: <span id="admin-dash-estudiantes-activos">0</span></div>
+    </div>
+
+    <div class="dashboard-kpi kpi-gold">
+        <div class="dashboard-kpi-label">Cursos</div>
+        <div class="dashboard-kpi-value" id="admin-dash-total-cursos">0</div>
+        <div class="dashboard-kpi-sub">Activos: <span id="admin-dash-cursos-activos">0</span></div>
+    </div>
+
+    <div class="dashboard-kpi kpi-green">
+        <div class="dashboard-kpi-label">Períodos</div>
+        <div class="dashboard-kpi-value" id="admin-dash-total-periodos">0</div>
+        <div class="dashboard-kpi-sub">Activos: <span id="admin-dash-periodos-activos">0</span></div>
+    </div>
+
+    <div class="dashboard-kpi kpi-red">
+        <div class="dashboard-kpi-label">Secciones</div>
+        <div class="dashboard-kpi-value" id="admin-dash-total-secciones">0</div>
+        <div class="dashboard-kpi-sub">Activas: <span id="admin-dash-secciones-activas">0</span></div>
+    </div>
+</div>
+
+<div class="dashboard-summary-row mb-3">
+    <div class="dashboard-summary-box">
+        <h4>Matrículas</h4>
+        <p>Total: <strong id="admin-dash-total-matriculas">0</strong></p>
+        <p>Pendientes: <strong id="admin-dash-matriculas-pendientes">0</strong></p>
+        <p>Confirmadas: <strong id="admin-dash-matriculas-confirmadas">0</strong></p>
+    </div>
+
+    <div class="dashboard-summary-box">
+        <h4>Pagos</h4>
+        <p>Total pagos: <strong id="admin-dash-total-pagos">0</strong></p>
+        <p>Monto recaudado: <strong id="admin-dash-monto-recaudado">₡0.00</strong></p>
+    </div>
+
+    <div class="dashboard-summary-box">
+        <h4>Facturación</h4>
+        <p>Facturas pendientes: <strong id="admin-dash-facturas-pendientes">0</strong></p>
+        <p>Saldo pendiente: <strong id="admin-dash-saldo-pendiente-total">₡0.00</strong></p>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <div class="dashboard-stack">
+        <div class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <h3>Matrículas recientes</h3>
+                    <p>Últimos movimientos registrados</p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Estudiante</th>
+                            <th>Período</th>
+                            <th>Créditos</th>
+                            <th>Monto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-admin-dashboard-matriculas">
+                        <tr>
+                            <td colspan="6">Cargando matrículas...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <h3>Pagos recientes</h3>
+                    <p>Últimos pagos aplicados en el sistema</p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Estudiante</th>
+                            <th>Factura</th>
+                            <th>Monto</th>
+                            <th>Método</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-admin-dashboard-pagos">
+                        <tr>
+                            <td colspan="6">Cargando pagos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="dashboard-stack">
+        <div class="dashboard-panel">
+            <div class="dashboard-panel-header">
+                <div>
+                    <h3>Períodos</h3>
+                    <p>Estado actual de períodos académicos</p>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Tipo</th>
+                            <th>Año</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-admin-dashboard-periodos">
+                        <tr>
+                            <td colspan="5">Cargando períodos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

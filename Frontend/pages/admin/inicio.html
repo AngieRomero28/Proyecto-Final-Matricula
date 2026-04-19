@@ -1,0 +1,55 @@
+<div class="page-header">
+    <div>
+        <h1>Inicio</h1>
+        <p>Resumen rápido de actividad administrativa</p>
+    </div>
+</div>
+
+<div id="admin-inicio-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-green">
+        <div class="stat-label">Monto recaudado</div>
+        <div class="stat-value" id="admin-monto-recaudado">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-red">
+        <div class="stat-label">Saldo pendiente</div>
+        <div class="stat-value" id="admin-saldo-pendiente">₡0.00</div>
+    </div>
+
+    <div class="stat-card c-gold">
+        <div class="stat-label">Facturas pendientes</div>
+        <div class="stat-value" id="admin-facturas-pendientes">0</div>
+    </div>
+
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total pagos</div>
+        <div class="stat-value" id="admin-total-pagos">0</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Movimientos recientes</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Estudiante</th>
+                    <th>Factura</th>
+                    <th>Monto</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-admin-movimientos">
+                <tr>
+                    <td colspan="5">Cargando movimientos...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
