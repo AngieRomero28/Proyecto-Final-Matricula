@@ -1,0 +1,92 @@
+<!-- secciones.html -->
+
+<div class="page-header">
+    <div>
+        <h1>Secciones</h1>
+        <p>Consulta de secciones, cupos y programación académica</p>
+    </div>
+</div>
+
+<div id="registro-secciones-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total secciones</div>
+        <div class="stat-value" id="registro-secciones-total">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Secciones activas</div>
+        <div class="stat-value" id="registro-secciones-activas">0</div>
+    </div>
+
+    <div class="stat-card c-purple">
+        <div class="stat-label">Cupos disponibles</div>
+        <div class="stat-value" id="registro-secciones-cupos">0</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+
+    <div class="card-body">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="filtro-registro-secciones">Buscar</label>
+                <input
+                    type="text"
+                    id="filtro-registro-secciones"
+                    placeholder="Sección, curso, docente o período..."
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="filtro-registro-estado-seccion">Estado</label>
+                <select id="filtro-registro-estado-seccion">
+                    <option value="">Todos</option>
+                    <option value="activa">Activa</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactiva">Inactiva</option>
+                    <option value="cerrada">Cerrada</option>
+                    <option value="inactivo">Inactivo</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-outline" id="btn-filtrar-registro-secciones">
+                Filtrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de secciones</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Sección</th>
+                    <th>Curso</th>
+                    <th>Docente</th>
+                    <th>Período</th>
+                    <th>Cupo</th>
+                    <th>Estado</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-registro-secciones">
+                <tr>
+                    <td colspan="8">Cargando secciones...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

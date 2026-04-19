@@ -1,0 +1,61 @@
+<!-- comprobantes.html -->
+
+<div class="page-header">
+    <div>
+        <h1>Comprobantes</h1>
+        <p>Consulta de comprobantes generados por matrícula</p>
+    </div>
+</div>
+
+<div id="registro-comprobantes-message"></div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+
+    <div class="card-body">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="filtro-registro-comprobante">Buscar</label>
+                <input
+                    type="text"
+                    id="filtro-registro-comprobante"
+                    placeholder="Estudiante, carnet, factura o comprobante..."
+                >
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-outline" id="btn-filtrar-registro-comprobante">
+                Filtrar
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Listado de comprobantes</h3>
+    </div>
+
+    <div class="table-wrap">
+        <table>
+            <thead>
+                <tr>
+                    <th>Comprobante</th>
+                    <th>Estudiante</th>
+                    <th>Carnet</th>
+                    <th>Factura</th>
+                    <th>Fecha</th>
+                    <th>Monto</th>
+                </tr>
+            </thead>
+            <tbody id="tabla-registro-comprobantes">
+                <tr>
+                    <td colspan="6">Cargando comprobantes...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
