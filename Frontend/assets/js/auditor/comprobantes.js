@@ -30,10 +30,14 @@ window.Modules.auditorComprobantes = (function () {
         try {
             const response = await window.ApiService.obtenerComprobantes();
             comprobantes = Array.isArray(response.data) ? response.data : [];
+
+            console.log("🔍 comprobantes backend:", comprobantes);
+
             filtrados = [...comprobantes];
             renderTabla();
         } catch (error) {
             console.error('Error cargando comprobantes:', error);
+
             window.UI.showMessage(
                 'auditor-comprobantes-message',
                 'danger',
@@ -54,13 +58,41 @@ window.Modules.auditorComprobantes = (function () {
         filtrados = comprobantes.filter((item) => {
             return (
                 !texto ||
-                String(item.NombreEstudiante || item.Estudiante || '').toLowerCase().includes(texto) ||
-                String(item.NumeroFactura || item.FacturaID || '').toLowerCase().includes(texto) ||
-                String(item.Comprobante || item.ComprobanteID || '').toLowerCase().includes(texto)
+                String(item.NombreEstudiante || item.nombreEstudiante || '').toLowerCase().includes(texto) ||
+                String(item.NumeroFactura || item.numeroFactura || '').toLowerCase().includes(texto) ||
+                String(item.ComprobanteMatricula || item.ComprobanteID || item.comprobante || '').toLowerCase().includes(texto)
             );
         });
 
         renderTabla();
+    }
+
+    function obtenerIdComprobante(item) {
+        return (
+            item.ComprobanteMatricula ??
+            item.ComprobanteID ??
+            item.comprobante ??
+            item.MatriculaID ??
+            'N/D'
+        );
+    }
+
+    function obtenerFecha(item) {
+        return (
+            item.FechaComprobante ??
+            item.FechaMatricula ??
+            item.Fecha ??
+            null
+        );
+    }
+
+    function obtenerMonto(item) {
+        return (
+            item.MontoTotal ??
+            item.CostoTotal ??
+            item.Total ??
+            0
+        );
     }
 
     function renderTabla() {
@@ -74,17 +106,17 @@ window.Modules.auditorComprobantes = (function () {
 
         tabla.innerHTML = filtrados
             .sort((a, b) => {
-                const fechaA = new Date(a.FechaComprobante || a.FechaMatricula || a.Fecha || 0).getTime();
-                const fechaB = new Date(b.FechaComprobante || b.FechaMatricula || b.Fecha || 0).getTime();
+                const fechaA = new Date(obtenerFecha(a) || 0).getTime();
+                const fechaB = new Date(obtenerFecha(b) || 0).getTime();
                 return fechaB - fechaA;
             })
             .map((item) => `
                 <tr>
-                    <td>${escapeHtml(item.Comprobante || item.ComprobanteID || 'N/D')}</td>
-                    <td>${escapeHtml(item.NombreEstudiante || item.Estudiante || 'N/D')}</td>
-                    <td>${escapeHtml(item.NumeroFactura || item.FacturaID || 'N/D')}</td>
-                    <td>${escapeHtml(formatearFecha(item.FechaComprobante || item.FechaMatricula || item.Fecha))}</td>
-                    <td>${escapeHtml(window.Helpers.formatCurrency(item.MontoTotal || item.CostoTotal || item.Total || 0))}</td>
+                    <td>${escapeHtml(obtenerIdComprobante(item))}</td>
+                    <td>${escapeHtml(item.NombreEstudiante || item.nombreEstudiante || 'N/D')}</td>
+                    <td>${escapeHtml(item.NumeroFactura || item.numeroFactura || 'N/D')}</td>
+                    <td>${escapeHtml(formatearFecha(obtenerFecha(item)))}</td>
+                    <td>${escapeHtml(window.Helpers.formatCurrency(obtenerMonto(item)))}</td>
                 </tr>
             `).join('');
     }
