@@ -3,26 +3,32 @@
 <div class="page-header">
     <div>
         <h1>Períodos</h1>
-        <p>Consulta de períodos académicos y ventanas de matrícula</p>
+        <p>Gestión de períodos académicos y ventanas de matrícula</p>
+    </div>
+
+    <div class="page-actions">
+        <button class="btn btn-outline" id="btn-admin-nuevo-periodo">
+            Actualizar listado
+        </button>
     </div>
 </div>
 
-<div id="registro-periodos-message"></div>
+<div id="admin-periodos-message"></div>
 
 <div class="stats-row">
     <div class="stat-card c-blue">
         <div class="stat-label">Total períodos</div>
-        <div class="stat-value" id="registro-periodos-total">0</div>
+        <div class="stat-value" id="admin-periodos-total">0</div>
     </div>
 
     <div class="stat-card c-green">
         <div class="stat-label">Períodos activos</div>
-        <div class="stat-value" id="registro-periodos-activos">0</div>
+        <div class="stat-value" id="admin-periodos-activos">0</div>
     </div>
 
     <div class="stat-card c-orange">
         <div class="stat-label">Matrícula abierta</div>
-        <div class="stat-value" id="registro-periodos-matricula-abierta">0</div>
+        <div class="stat-value" id="admin-periodos-matricula-abierta">0</div>
     </div>
 </div>
 
@@ -34,17 +40,17 @@
     <div class="card-body">
         <div class="form-row">
             <div class="form-group">
-                <label for="filtro-registro-periodos">Buscar</label>
+                <label for="filtro-admin-periodos">Buscar</label>
                 <input
                     type="text"
-                    id="filtro-registro-periodos"
+                    id="filtro-admin-periodos"
                     placeholder="Nombre, tipo o año del período..."
                 >
             </div>
 
             <div class="form-group">
-                <label for="filtro-registro-estado-periodo">Estado</label>
-                <select id="filtro-registro-estado-periodo">
+                <label for="filtro-admin-estado-periodo">Estado</label>
+                <select id="filtro-admin-estado-periodo">
                     <option value="">Todos</option>
                     <option value="activo">Activo</option>
                     <option value="planeado">Planeado</option>
@@ -56,7 +62,7 @@
         </div>
 
         <div class="form-actions">
-            <button class="btn btn-outline" id="btn-filtrar-registro-periodos">
+            <button class="btn btn-outline" id="btn-filtrar-admin-periodos">
                 Filtrar
             </button>
         </div>
@@ -81,7 +87,7 @@
                     <th>Acción</th>
                 </tr>
             </thead>
-            <tbody id="tabla-registro-periodos">
+            <tbody id="tabla-admin-periodos">
                 <tr>
                     <td colspan="7">Cargando períodos...</td>
                 </tr>

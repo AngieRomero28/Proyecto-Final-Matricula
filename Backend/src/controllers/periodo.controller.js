@@ -1,3 +1,4 @@
+// backend/src/controllers/periodo.controller.js
 const periodoService = require('../services/periodo.service');
 
 const obtenerPeriodos = async (req, res) => {
@@ -46,7 +47,41 @@ const obtenerPeriodoPorId = async (req, res) => {
     }
 };
 
+const abrirMatriculaPeriodo = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const {
+            FechaInicioMatricula,
+            FechaFinMatricula,
+            EstadoPeriodo
+        } = req.body || {};
+
+        if (!id || Number.isNaN(Number(id))) {
+            return res.status(400).json({
+                mensaje: 'El id del periodo debe ser numérico'
+            });
+        }
+
+        const resultado = await periodoService.abrirMatriculaPeriodo(Number(id), {
+            FechaInicioMatricula,
+            FechaFinMatricula,
+            EstadoPeriodo
+        });
+
+        res.status(200).json({
+            mensaje: 'Matrícula del período actualizada correctamente',
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error en abrirMatriculaPeriodo:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al abrir la matrícula del período'
+        });
+    }
+};
+
 module.exports = {
     obtenerPeriodos,
-    obtenerPeriodoPorId
+    obtenerPeriodoPorId,
+    abrirMatriculaPeriodo
 };
