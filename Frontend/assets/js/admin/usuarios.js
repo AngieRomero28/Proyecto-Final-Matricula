@@ -154,7 +154,10 @@ window.Modules.adminUsuarios = (function () {
                         </span>
                     </td>
                     <td>
-                        <button class="btn btn-outline" onclick="window.Modules.adminUsuarios.verDetalle(${usuario.UsuarioID})">
+                        <button
+                            class="btn btn-outline"
+                            onclick="window.Modules.adminUsuarios.verDetalle(${Number(usuario.UsuarioID)})"
+                        >
                             Ver
                         </button>
                     </td>
@@ -336,70 +339,98 @@ window.Modules.adminUsuarios = (function () {
                     selectTipo.dataset.bound = 'true';
                     selectTipo.addEventListener('change', toggleBloquesTipoUsuario);
                 }
+                toggleBloquesTipoUsuario();
             },
-            onConfirm: async () => {
-                const nombre = String(document.getElementById('admin-usuario-nombre')?.value || '').trim();
-                const apellido1 = String(document.getElementById('admin-usuario-apellido1')?.value || '').trim();
-                const apellido2 = String(document.getElementById('admin-usuario-apellido2')?.value || '').trim();
+            onConfirm: () => confirmarCreacionUsuario()
+        });
+    }
 
-                const nombreCompletoNuevo = construirNombreCompleto(nombre, apellido1, apellido2);
+    async function confirmarCreacionUsuario() {
+        try {
+            const nombre = String(document.getElementById('admin-usuario-nombre')?.value || '').trim();
+            const apellido1 = String(document.getElementById('admin-usuario-apellido1')?.value || '').trim();
+            const apellido2 = String(document.getElementById('admin-usuario-apellido2')?.value || '').trim();
 
-                const existeNombreCompleto = usuarios.some((u) => {
-                    const actual = construirNombreCompletoDesdeUsuario(u);
-                    return actual && actual.toLowerCase() === nombreCompletoNuevo.toLowerCase();
-                });
+            const nombreCompletoNuevo = construirNombreCompleto(nombre, apellido1, apellido2);
 
-                if (existeNombreCompleto) {
-                    throw new Error('Ya existe un usuario con el mismo nombre completo.');
-                }
+            const existeNombreCompleto = usuarios.some((u) => {
+                const actual = construirNombreCompletoDesdeUsuario(u);
+                return actual && actual.toLowerCase() === nombreCompletoNuevo.toLowerCase();
+            });
 
-                const body = {
-                    TipoUsuario: String(document.getElementById('admin-usuario-tipo')?.value || '').trim(),
-                    EstadoUsuario: String(document.getElementById('admin-usuario-estado')?.value || 'Activo').trim(),
-                    Username: String(document.getElementById('admin-usuario-username')?.value || '').trim(),
-                    Identificacion: String(document.getElementById('admin-usuario-identificacion')?.value || '').trim(),
-                    Nombre: nombre,
-                    Apellido1: apellido1,
-                    Apellido2: apellido2,
-                    CorreoInstitucional: String(document.getElementById('admin-usuario-correo')?.value || '').trim(),
-                    Telefono: String(document.getElementById('admin-usuario-telefono')?.value || '').trim(),
-                    password: String(document.getElementById('admin-usuario-password')?.value || '').trim()
-                };
-
-                if (!body.TipoUsuario) {
-                    throw new Error('Debe seleccionar el tipo de usuario.');
-                }
-
-                if (body.TipoUsuario === 'estudiante') {
-                    body.Carnet = String(document.getElementById('admin-usuario-carnet')?.value || '').trim();
-                    body.ProgramaAcademicoID = Number(document.getElementById('admin-usuario-programa')?.value || 0);
-                    body.PlanEstudioID = Number(document.getElementById('admin-usuario-plan')?.value || 0);
-                    body.FechaIngreso = String(document.getElementById('admin-usuario-fecha-ingreso')?.value || '').trim();
-                    body.EstadoAcademico = String(document.getElementById('admin-usuario-estado-academico')?.value || 'Activo').trim();
-                }
-
-                if (body.TipoUsuario === 'docente') {
-                    body.Especialidad = String(document.getElementById('admin-usuario-especialidad')?.value || '').trim();
-                    body.FechaContratacion = String(document.getElementById('admin-usuario-fecha-contratacion')?.value || '').trim();
-                    body.EstadoDocente = String(document.getElementById('admin-usuario-estado-docente')?.value || 'Activo').trim();
-                }
-
-                if (!window.ApiService?.crearUsuario) {
-                    throw new Error('ApiService.crearUsuario no está disponible.');
-                }
-
-                await window.ApiService.crearUsuario(body);
-                await cargarUsuarios();
-
+            if (existeNombreCompleto) {
                 window.UI.showMessage(
                     'admin-usuarios-message',
-                    'success',
-                    'Usuario creado correctamente.'
+                    'danger',
+                    'Ya existe un usuario con el mismo nombre completo.'
                 );
+                return false;
             }
-        });
 
-        setTimeout(toggleBloquesTipoUsuario, 0);
+            const body = {
+                TipoUsuario: String(document.getElementById('admin-usuario-tipo')?.value || '').trim(),
+                EstadoUsuario: String(document.getElementById('admin-usuario-estado')?.value || 'Activo').trim(),
+                Username: String(document.getElementById('admin-usuario-username')?.value || '').trim(),
+                Identificacion: String(document.getElementById('admin-usuario-identificacion')?.value || '').trim(),
+                Nombre: nombre,
+                Apellido1: apellido1,
+                Apellido2: apellido2,
+                CorreoInstitucional: String(document.getElementById('admin-usuario-correo')?.value || '').trim(),
+                Telefono: String(document.getElementById('admin-usuario-telefono')?.value || '').trim(),
+                password: String(document.getElementById('admin-usuario-password')?.value || '').trim()
+            };
+
+            if (!body.TipoUsuario) {
+                window.UI.showMessage(
+                    'admin-usuarios-message',
+                    'danger',
+                    'Debe seleccionar el tipo de usuario.'
+                );
+                return false;
+            }
+
+            if (body.TipoUsuario === 'estudiante') {
+                body.Carnet = String(document.getElementById('admin-usuario-carnet')?.value || '').trim();
+                body.ProgramaAcademicoID = Number(document.getElementById('admin-usuario-programa')?.value || 0);
+                body.PlanEstudioID = Number(document.getElementById('admin-usuario-plan')?.value || 0);
+                body.FechaIngreso = String(document.getElementById('admin-usuario-fecha-ingreso')?.value || '').trim();
+                body.EstadoAcademico = String(document.getElementById('admin-usuario-estado-academico')?.value || 'Activo').trim();
+            }
+
+            if (body.TipoUsuario === 'docente') {
+                body.Especialidad = String(document.getElementById('admin-usuario-especialidad')?.value || '').trim();
+                body.FechaContratacion = String(document.getElementById('admin-usuario-fecha-contratacion')?.value || '').trim();
+                body.EstadoDocente = String(document.getElementById('admin-usuario-estado-docente')?.value || 'Activo').trim();
+            }
+
+            if (!window.ApiService?.crearUsuario) {
+                window.UI.showMessage(
+                    'admin-usuarios-message',
+                    'danger',
+                    'ApiService.crearUsuario no está disponible.'
+                );
+                return false;
+            }
+
+            await window.ApiService.crearUsuario(body);
+            await cargarUsuarios();
+
+            window.UI.showMessage(
+                'admin-usuarios-message',
+                'success',
+                'Usuario creado correctamente.'
+            );
+
+            return true;
+        } catch (error) {
+            console.error('Error creando usuario:', error);
+            window.UI.showMessage(
+                'admin-usuarios-message',
+                'danger',
+                error.message || 'No se pudo crear el usuario.'
+            );
+            return false;
+        }
     }
 
     function toggleBloquesTipoUsuario() {
