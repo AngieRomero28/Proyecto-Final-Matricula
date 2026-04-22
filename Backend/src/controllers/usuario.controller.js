@@ -1,3 +1,4 @@
+// backend/src/controllers/usuario.controller.js
 const usuarioService = require('../services/usuario.service');
 
 const obtenerUsuarios = async (req, res) => {
@@ -42,6 +43,22 @@ const obtenerUsuarioPorId = async (req, res) => {
         console.error('Error en obtenerUsuarioPorId:', error);
         res.status(error.statusCode || 500).json({
             mensaje: error.message || 'Error al obtener el usuario'
+        });
+    }
+};
+
+const crearUsuario = async (req, res) => {
+    try {
+        const resultado = await usuarioService.crearUsuario(req.body || {});
+
+        res.status(201).json({
+            mensaje: 'Usuario creado correctamente',
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error en crearUsuario:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al crear el usuario'
         });
     }
 };
@@ -133,6 +150,7 @@ const cambiarPassword = async (req, res) => {
 module.exports = {
     obtenerUsuarios,
     obtenerUsuarioPorId,
+    crearUsuario,
     loginUsuario,
     obtenerPerfil,
     cambiarPassword
