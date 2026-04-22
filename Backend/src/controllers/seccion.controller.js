@@ -28,7 +28,7 @@ const obtenerSeccionPorId = async (req, res) => {
 
         const seccion = await seccionService.obtenerSeccionPorId(Number(id));
 
-        if (!seccion) {
+        if (!seccion || (Array.isArray(seccion) && seccion.length === 0)) {
             return res.status(404).json({
                 mensaje: 'Sección no encontrada'
             });
@@ -46,7 +46,24 @@ const obtenerSeccionPorId = async (req, res) => {
     }
 };
 
+const crearSeccion = async (req, res) => {
+    try {
+        const resultado = await seccionService.crearSeccion(req.body || {});
+
+        res.status(201).json({
+            mensaje: 'Sección creada correctamente',
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error en crearSeccion:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al crear la sección'
+        });
+    }
+};
+
 module.exports = {
     obtenerSecciones,
-    obtenerSeccionPorId
+    obtenerSeccionPorId,
+    crearSeccion
 };

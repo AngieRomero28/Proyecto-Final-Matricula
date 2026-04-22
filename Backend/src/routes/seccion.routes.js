@@ -21,4 +21,12 @@ router.get(
     seccionController.obtenerSeccionPorId
 );
 
+// Crear nueva sección
+router.post(
+    '/',
+    authMiddleware,
+    permitirRoles('admin'),
+    seccionController.crearSeccion
+);
+
 module.exports = router;

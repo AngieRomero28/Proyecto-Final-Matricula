@@ -1,15 +1,69 @@
+<!-- frontend/views/admin/secciones.html -->
+
 <div class="page-header">
     <div>
         <h1>Secciones</h1>
-        <p>Consulta de secciones de cursos</p>
+        <p>Gestión de secciones de cursos</p>
     </div>
 
     <div class="page-actions">
-        <button class="btn btn-outline" id="btn-admin-nueva-seccion">Actualizar</button>
+        <button class="btn btn-primary" id="btn-admin-nueva-seccion">Nueva sección</button>
     </div>
 </div>
 
 <div id="admin-secciones-message"></div>
+
+<div class="stats-row">
+    <div class="stat-card c-blue">
+        <div class="stat-label">Total secciones</div>
+        <div class="stat-value" id="admin-secciones-total">0</div>
+    </div>
+
+    <div class="stat-card c-green">
+        <div class="stat-label">Secciones activas</div>
+        <div class="stat-value" id="admin-secciones-activas">0</div>
+    </div>
+
+    <div class="stat-card c-purple">
+        <div class="stat-label">Cupos disponibles</div>
+        <div class="stat-value" id="admin-secciones-cupos">0</div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header">
+        <h3>Filtros</h3>
+    </div>
+
+    <div class="card-body">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="filtro-admin-secciones">Buscar</label>
+                <input
+                    type="text"
+                    id="filtro-admin-secciones"
+                    placeholder="Curso, sección, período o docente..."
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="filtro-admin-estado-seccion">Estado</label>
+                <select id="filtro-admin-estado-seccion">
+                    <option value="">Todos</option>
+                    <option value="activa">Activa</option>
+                    <option value="activo">Activo</option>
+                    <option value="inactiva">Inactiva</option>
+                    <option value="cerrada">Cerrada</option>
+                    <option value="inactivo">Inactivo</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-outline" id="btn-filtrar-admin-secciones">Filtrar</button>
+        </div>
+    </div>
+</div>
 
 <div class="card">
     <div class="card-header">
@@ -21,6 +75,7 @@
             <thead>
                 <tr>
                     <th>ID</th>
+                    <th>Sección</th>
                     <th>Curso</th>
                     <th>Período</th>
                     <th>Cupo</th>
@@ -31,7 +86,7 @@
             </thead>
             <tbody id="tabla-admin-secciones">
                 <tr>
-                    <td colspan="7">Cargando secciones...</td>
+                    <td colspan="8">Cargando secciones...</td>
                 </tr>
             </tbody>
         </table>
