@@ -1,4 +1,4 @@
-<!-- periodos.html -->
+<!-- frontend/views/admin/periodos.html -->
 
 <div class="page-header">
     <div>
@@ -7,8 +7,8 @@
     </div>
 
     <div class="page-actions">
-        <button class="btn btn-outline" id="btn-admin-nuevo-periodo">
-            Actualizar listado
+        <button class="btn btn-primary" id="btn-admin-nuevo-periodo">
+            Nuevo período
         </button>
     </div>
 </div>
@@ -44,7 +44,7 @@
                 <input
                     type="text"
                     id="filtro-admin-periodos"
-                    placeholder="Nombre, tipo o año del período..."
+                    placeholder="Nombre, tipo, año o ID del período..."
                 >
             </div>
 
@@ -81,6 +81,7 @@
                     <th>ID</th>
                     <th>Nombre</th>
                     <th>Tipo</th>
+                    <th>Año</th>
                     <th>Fecha inicio</th>
                     <th>Fecha fin</th>
                     <th>Estado</th>
@@ -89,7 +90,7 @@
             </thead>
             <tbody id="tabla-admin-periodos">
                 <tr>
-                    <td colspan="7">Cargando períodos...</td>
+                    <td colspan="8">Cargando períodos...</td>
                 </tr>
             </tbody>
         </table>
