@@ -232,12 +232,18 @@ window.UI = {
         body = '',
         showFooter = true,
         hideFooter = false,
-        onConfirm = null
+        onConfirm = null,
+        onOpen = null,
+        confirmText = 'Aceptar',
+        cancelText = 'Cancelar'
     } = {}) {
         const overlay = document.getElementById('global-modal-overlay');
         const titleEl = document.getElementById('global-modal-title');
         const bodyEl = document.getElementById('global-modal-body');
         const footerEl = document.getElementById('global-modal-footer');
+        const confirmBtn = document.getElementById('global-modal-confirm-btn');
+        const cancelBtn = document.getElementById('global-modal-cancel-btn');
+        const closeBtn = document.getElementById('global-modal-close-btn');
 
         if (!overlay || !titleEl || !bodyEl || !footerEl) return;
 
@@ -249,28 +255,102 @@ window.UI = {
         const visibleFooter = hideFooter ? false : showFooter;
         footerEl.style.display = visibleFooter ? 'flex' : 'none';
 
+        if (confirmBtn) {
+            confirmBtn.textContent = confirmText;
+            confirmBtn.disabled = false;
+        }
+
+        if (cancelBtn) {
+            cancelBtn.textContent = cancelText;
+            cancelBtn.disabled = false;
+            cancelBtn.onclick = () => this.closeModal();
+        }
+
+        if (closeBtn) {
+            closeBtn.disabled = false;
+            closeBtn.onclick = () => this.closeModal();
+        }
+
+        if (confirmBtn) {
+            confirmBtn.onclick = () => this.confirmModal();
+        }
+
         overlay.classList.add('open');
+
+        if (typeof onOpen === 'function') {
+            try {
+                onOpen();
+            } catch (error) {
+                console.error('Error en onOpen del modal:', error);
+            }
+        }
     },
 
     async confirmModal() {
+        const confirmBtn = document.getElementById('global-modal-confirm-btn');
+        const cancelBtn = document.getElementById('global-modal-cancel-btn');
+        const closeBtn = document.getElementById('global-modal-close-btn');
+
         if (typeof this.modalConfirmHandler !== 'function') {
             this.closeModal();
             return;
         }
 
         try {
-            await this.modalConfirmHandler();
+            if (confirmBtn) confirmBtn.disabled = true;
+            if (cancelBtn) cancelBtn.disabled = true;
+            if (closeBtn) closeBtn.disabled = true;
+
+            const result = await this.modalConfirmHandler();
+
+            if (result !== false) {
+                this.closeModal();
+                return;
+            }
         } catch (error) {
             console.error('Error en confirmModal:', error);
+        } finally {
+            if (confirmBtn) confirmBtn.disabled = false;
+            if (cancelBtn) cancelBtn.disabled = false;
+            if (closeBtn) closeBtn.disabled = false;
         }
     },
 
     closeModal() {
         const overlay = document.getElementById('global-modal-overlay');
+        const bodyEl = document.getElementById('global-modal-body');
+        const titleEl = document.getElementById('global-modal-title');
+        const footerEl = document.getElementById('global-modal-footer');
+        const confirmBtn = document.getElementById('global-modal-confirm-btn');
+        const cancelBtn = document.getElementById('global-modal-cancel-btn');
+        const closeBtn = document.getElementById('global-modal-close-btn');
+
         if (!overlay) return;
 
         overlay.classList.remove('open');
+
         this.modalConfirmHandler = null;
+
+        if (titleEl) titleEl.textContent = 'Modal';
+        if (bodyEl) bodyEl.innerHTML = '';
+        if (footerEl) footerEl.style.display = 'flex';
+
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Aceptar';
+            confirmBtn.onclick = null;
+        }
+
+        if (cancelBtn) {
+            cancelBtn.disabled = false;
+            cancelBtn.textContent = 'Cancelar';
+            cancelBtn.onclick = null;
+        }
+
+        if (closeBtn) {
+            closeBtn.disabled = false;
+            closeBtn.onclick = null;
+        }
     },
 
     showPageLoader() {
