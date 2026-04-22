@@ -1,3 +1,4 @@
+// frontend/js/admin/periodos.js
 window.Modules = window.Modules || {};
 
 window.Modules.adminPeriodos = (function () {
@@ -10,15 +11,14 @@ window.Modules.adminPeriodos = (function () {
     }
 
     function configurarEventos() {
-        const btnActualizar = document.getElementById('btn-admin-nuevo-periodo');
+        const btnNuevo = document.getElementById('btn-admin-nuevo-periodo');
         const btnFiltrar = document.getElementById('btn-filtrar-admin-periodos');
         const inputBuscar = document.getElementById('filtro-admin-periodos');
         const selectEstado = document.getElementById('filtro-admin-estado-periodo');
 
-        if (btnActualizar && !btnActualizar.dataset.bound) {
-            btnActualizar.dataset.bound = 'true';
-            btnActualizar.textContent = 'Actualizar listado';
-            btnActualizar.addEventListener('click', manejarRecargaPeriodos);
+        if (btnNuevo && !btnNuevo.dataset.bound) {
+            btnNuevo.dataset.bound = 'true';
+            btnNuevo.addEventListener('click', abrirCrearPeriodo);
         }
 
         if (btnFiltrar && !btnFiltrar.dataset.bound) {
@@ -37,31 +37,12 @@ window.Modules.adminPeriodos = (function () {
         }
     }
 
-    async function manejarRecargaPeriodos() {
-        window.UI.clearMessage('admin-periodos-message');
-
-        try {
-            await cargarPeriodos();
-            window.UI.showMessage(
-                'admin-periodos-message',
-                'success',
-                'Listado actualizado correctamente.'
-            );
-        } catch (error) {
-            window.UI.showMessage(
-                'admin-periodos-message',
-                'danger',
-                error.message || 'No se pudo actualizar el listado.'
-            );
-        }
-    }
-
     async function cargarPeriodos() {
         const tabla = document.getElementById('tabla-admin-periodos');
         if (!tabla) return;
 
         try {
-            tabla.innerHTML = '<tr><td colspan="7">Cargando...</td></tr>';
+            tabla.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
 
             const response = await window.ApiService.obtenerPeriodos();
             periodos = Array.isArray(response.data) ? response.data : [];
@@ -71,7 +52,7 @@ window.Modules.adminPeriodos = (function () {
             renderTabla();
         } catch (error) {
             console.error('Error cargando períodos:', error);
-            tabla.innerHTML = '<tr><td colspan="7">Error cargando datos</td></tr>';
+            tabla.innerHTML = '<tr><td colspan="8">Error cargando datos</td></tr>';
             throw error;
         }
     }
@@ -140,7 +121,7 @@ window.Modules.adminPeriodos = (function () {
         if (!tabla) return;
 
         if (!periodosFiltrados.length) {
-            tabla.innerHTML = '<tr><td colspan="7">No hay períodos</td></tr>';
+            tabla.innerHTML = '<tr><td colspan="8">No hay períodos</td></tr>';
             return;
         }
 
@@ -152,6 +133,7 @@ window.Modules.adminPeriodos = (function () {
                     <td>${escapeHtml(p.PeriodoID)}</td>
                     <td>${escapeHtml(p.NombrePeriodo || 'N/D')}</td>
                     <td>${escapeHtml(p.TipoPeriodo || 'N/D')}</td>
+                    <td>${escapeHtml(p.Anio || 'N/D')}</td>
                     <td>${escapeHtml(formatearFecha(p.FechaInicio))}</td>
                     <td>${escapeHtml(formatearFecha(p.FechaFin))}</td>
                     <td>
@@ -179,6 +161,142 @@ window.Modules.adminPeriodos = (function () {
                 </tr>
             `;
         }).join('');
+    }
+
+    function abrirCrearPeriodo() {
+        const anioActual = new Date().getFullYear();
+
+        window.UI.openModal({
+            title: 'Crear nuevo período',
+            body: `
+                <div class="form-grid">
+                    <div>
+                        <label for="admin-periodo-nombre">Nombre del período</label>
+                        <input type="text" id="admin-periodo-nombre" placeholder="Ej: C2-2026">
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-tipo">Tipo de período</label>
+                        <select id="admin-periodo-tipo">
+                            <option value="">Seleccione</option>
+                            <option value="Semestral">Semestral</option>
+                            <option value="Cuatrimestral">Cuatrimestral</option>
+                            <option value="Trimestral">Trimestral</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-anio">Año</label>
+                        <input type="number" id="admin-periodo-anio" min="${anioActual}" max="${anioActual + 1}" value="${anioActual}">
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-estado">Estado</label>
+                        <select id="admin-periodo-estado">
+                            <option value="Planeado">Planeado</option>
+                            <option value="Activo">Activo</option>
+                            <option value="Inactivo">Inactivo</option>
+                            <option value="Cerrado">Cerrado</option>
+                            <option value="Finalizado">Finalizado</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-fecha-inicio">Fecha inicio</label>
+                        <input type="date" id="admin-periodo-fecha-inicio">
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-fecha-fin">Fecha fin</label>
+                        <input type="date" id="admin-periodo-fecha-fin">
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-fecha-inicio-matricula">Inicio matrícula</label>
+                        <input type="date" id="admin-periodo-fecha-inicio-matricula">
+                    </div>
+
+                    <div>
+                        <label for="admin-periodo-fecha-fin-matricula">Fin matrícula</label>
+                        <input type="date" id="admin-periodo-fecha-fin-matricula">
+                    </div>
+
+                    <div style="grid-column: 1 / -1;">
+                        <label for="admin-periodo-costo">Costo del período</label>
+                        <input type="number" id="admin-periodo-costo" min="0" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+            `,
+            confirmText: 'Crear período',
+            cancelText: 'Cancelar',
+            onConfirm: async () => {
+                const nombre = String(document.getElementById('admin-periodo-nombre')?.value || '').trim();
+                const tipo = String(document.getElementById('admin-periodo-tipo')?.value || '').trim();
+                const anio = Number(document.getElementById('admin-periodo-anio')?.value || 0);
+                const estado = String(document.getElementById('admin-periodo-estado')?.value || 'Planeado').trim();
+                const fechaInicio = String(document.getElementById('admin-periodo-fecha-inicio')?.value || '').trim();
+                const fechaFin = String(document.getElementById('admin-periodo-fecha-fin')?.value || '').trim();
+                const fechaInicioMatricula = String(document.getElementById('admin-periodo-fecha-inicio-matricula')?.value || '').trim();
+                const fechaFinMatricula = String(document.getElementById('admin-periodo-fecha-fin-matricula')?.value || '').trim();
+                const costoPeriodo = Number(document.getElementById('admin-periodo-costo')?.value || 0);
+
+                if (!nombre) {
+                    throw new Error('Debe ingresar el nombre del período.');
+                }
+
+                if (!tipo) {
+                    throw new Error('Debe seleccionar el tipo de período.');
+                }
+
+                if (!anio || Number.isNaN(anio)) {
+                    throw new Error('Debe ingresar un año válido.');
+                }
+
+                if (!fechaInicio || !fechaFin) {
+                    throw new Error('Debe completar la fecha de inicio y fin del período.');
+                }
+
+                if (fechaFin < fechaInicio) {
+                    throw new Error('La fecha fin del período no puede ser menor que la fecha inicio.');
+                }
+
+                if ((fechaInicioMatricula && !fechaFinMatricula) || (!fechaInicioMatricula && fechaFinMatricula)) {
+                    throw new Error('Debe completar ambas fechas de matrícula o dejar ambas vacías.');
+                }
+
+                if (fechaInicioMatricula && fechaFinMatricula && fechaFinMatricula < fechaInicioMatricula) {
+                    throw new Error('La fecha fin de matrícula no puede ser menor que la fecha inicio de matrícula.');
+                }
+
+                if (Number.isNaN(costoPeriodo) || costoPeriodo < 0) {
+                    throw new Error('Debe ingresar un costo válido.');
+                }
+
+                if (!window.ApiService?.crearPeriodo) {
+                    throw new Error('ApiService.crearPeriodo no está disponible.');
+                }
+
+                await window.ApiService.crearPeriodo({
+                    NombrePeriodo: nombre,
+                    TipoPeriodo: tipo,
+                    Anio: anio,
+                    FechaInicio: fechaInicio,
+                    FechaFin: fechaFin,
+                    FechaInicioMatricula: fechaInicioMatricula || null,
+                    FechaFinMatricula: fechaFinMatricula || null,
+                    EstadoPeriodo: estado,
+                    CostoPeriodo: costoPeriodo
+                });
+
+                await cargarPeriodos();
+
+                window.UI.showMessage(
+                    'admin-periodos-message',
+                    'success',
+                    'Período creado correctamente.'
+                );
+            }
+        });
     }
 
     function abrirMatricula(id) {
@@ -280,6 +398,7 @@ window.Modules.adminPeriodos = (function () {
                 <p><strong>Fecha fin:</strong> ${escapeHtml(formatearFecha(p.FechaFin))}</p>
                 <p><strong>Inicio matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaInicioMatricula))}</p>
                 <p><strong>Fin matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaFinMatricula))}</p>
+                <p><strong>Costo del período:</strong> ${escapeHtml(window.Helpers?.formatCurrency ? window.Helpers.formatCurrency(p.CostoPeriodo || 0) : (p.CostoPeriodo || 0))}</p>
                 <p><strong>Estado:</strong> ${escapeHtml(p.EstadoPeriodo || p.Estado || 'N/D')}</p>
             `,
             hideFooter: true

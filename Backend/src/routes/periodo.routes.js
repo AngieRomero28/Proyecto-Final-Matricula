@@ -14,6 +14,14 @@ router.get(
     periodoController.obtenerPeriodos
 );
 
+// Crear un nuevo periodo
+router.post(
+    '/',
+    authMiddleware,
+    permitirRoles('admin'),
+    periodoController.crearPeriodo
+);
+
 // Obtener un periodo por ID
 router.get(
     '/:id',

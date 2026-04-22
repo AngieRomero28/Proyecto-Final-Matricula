@@ -47,6 +47,22 @@ const obtenerPeriodoPorId = async (req, res) => {
     }
 };
 
+const crearPeriodo = async (req, res) => {
+    try {
+        const resultado = await periodoService.crearPeriodo(req.body || {});
+
+        res.status(201).json({
+            mensaje: 'Periodo creado correctamente',
+            data: resultado
+        });
+    } catch (error) {
+        console.error('Error en crearPeriodo:', error);
+        res.status(error.statusCode || 500).json({
+            mensaje: error.message || 'Error al crear el periodo'
+        });
+    }
+};
+
 const abrirMatriculaPeriodo = async (req, res) => {
     try {
         const { id } = req.params;
@@ -83,5 +99,6 @@ const abrirMatriculaPeriodo = async (req, res) => {
 module.exports = {
     obtenerPeriodos,
     obtenerPeriodoPorId,
+    crearPeriodo,
     abrirMatriculaPeriodo
 };
