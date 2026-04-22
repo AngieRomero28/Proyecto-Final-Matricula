@@ -42,6 +42,7 @@ window.Modules.adminPeriodos = (function () {
         if (!tabla) return;
 
         try {
+            window.UI?.clearMessage?.('admin-periodos-message');
             tabla.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
 
             const response = await window.ApiService.obtenerPeriodos();
@@ -187,7 +188,13 @@ window.Modules.adminPeriodos = (function () {
 
                     <div>
                         <label for="admin-periodo-anio">Año</label>
-                        <input type="number" id="admin-periodo-anio" min="${anioActual}" max="${anioActual + 1}" value="${anioActual}">
+                        <input
+                            type="number"
+                            id="admin-periodo-anio"
+                            min="${anioActual}"
+                            max="${anioActual + 1}"
+                            value="${anioActual}"
+                        >
                     </div>
 
                     <div>
@@ -223,7 +230,13 @@ window.Modules.adminPeriodos = (function () {
 
                     <div style="grid-column: 1 / -1;">
                         <label for="admin-periodo-costo">Costo del período</label>
-                        <input type="number" id="admin-periodo-costo" min="0" step="0.01" placeholder="0.00">
+                        <input
+                            type="number"
+                            id="admin-periodo-costo"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                        >
                     </div>
                 </div>
             `,
@@ -245,7 +258,7 @@ window.Modules.adminPeriodos = (function () {
                 }
 
                 if (!tipo) {
-                    throw new Error('Debe seleccionar el tipo de período.');
+                    throw new Error('Debe seleccionar si será trimestre, cuatrimestre o semestre.');
                 }
 
                 if (!anio || Number.isNaN(anio)) {
@@ -270,10 +283,6 @@ window.Modules.adminPeriodos = (function () {
 
                 if (Number.isNaN(costoPeriodo) || costoPeriodo < 0) {
                     throw new Error('Debe ingresar un costo válido.');
-                }
-
-                if (!window.ApiService?.crearPeriodo) {
-                    throw new Error('ApiService.crearPeriodo no está disponible.');
                 }
 
                 await window.ApiService.crearPeriodo({
@@ -363,13 +372,10 @@ window.Modules.adminPeriodos = (function () {
                     throw new Error('No puedes abrir matrícula para un período demasiado adelantado.');
                 }
 
-                await window.ApiService.request(`/periodos/${id}/abrir-matricula`, {
-                    method: 'PUT',
-                    body: {
-                        FechaInicioMatricula: inicio,
-                        FechaFinMatricula: fin,
-                        EstadoPeriodo: 'Activo'
-                    }
+                await window.ApiService.abrirMatriculaPeriodo(id, {
+                    FechaInicioMatricula: inicio,
+                    FechaFinMatricula: fin,
+                    EstadoPeriodo: 'Activo'
                 });
 
                 await cargarPeriodos();
@@ -398,7 +404,13 @@ window.Modules.adminPeriodos = (function () {
                 <p><strong>Fecha fin:</strong> ${escapeHtml(formatearFecha(p.FechaFin))}</p>
                 <p><strong>Inicio matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaInicioMatricula))}</p>
                 <p><strong>Fin matrícula:</strong> ${escapeHtml(formatearFecha(p.FechaFinMatricula))}</p>
-                <p><strong>Costo del período:</strong> ${escapeHtml(window.Helpers?.formatCurrency ? window.Helpers.formatCurrency(p.CostoPeriodo || 0) : (p.CostoPeriodo || 0))}</p>
+                <p><strong>Costo del período:</strong> ${
+                    escapeHtml(
+                        window.Helpers?.formatCurrency
+                            ? window.Helpers.formatCurrency(p.CostoPeriodo || 0)
+                            : (p.CostoPeriodo || 0)
+                    )
+                }</p>
                 <p><strong>Estado:</strong> ${escapeHtml(p.EstadoPeriodo || p.Estado || 'N/D')}</p>
             `,
             hideFooter: true

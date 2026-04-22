@@ -1,3 +1,4 @@
+// frontend/js/api.js
 window.ApiService = {
     async request(endpoint, options = {}) {
         const url = `${window.APP_CONFIG.API_BASE_URL}${endpoint}`;
@@ -17,7 +18,6 @@ window.ApiService = {
             config.body = JSON.stringify(options.body);
         }
 
-        // Backend actual todavía depende de estos headers
         if (session?.userId) {
             config.headers['x-usuario-id'] = String(session.userId);
         }
@@ -145,6 +145,140 @@ window.ApiService = {
         };
     },
 
+    normalizarPayloadPeriodo(body = {}) {
+        const nombrePeriodo = String(body.NombrePeriodo ?? body.nombrePeriodo ?? '').trim();
+        const tipoPeriodo = String(body.TipoPeriodo ?? body.tipoPeriodo ?? '').trim();
+        const anio = Number(body.Anio ?? body.anio ?? 0);
+        const fechaInicio = String(body.FechaInicio ?? body.fechaInicio ?? '').trim();
+        const fechaFin = String(body.FechaFin ?? body.fechaFin ?? '').trim();
+        const fechaInicioMatricula = body.FechaInicioMatricula ?? body.fechaInicioMatricula ?? null;
+        const fechaFinMatricula = body.FechaFinMatricula ?? body.fechaFinMatricula ?? null;
+        const estadoPeriodo = String(body.EstadoPeriodo ?? body.estadoPeriodo ?? 'Planeado').trim();
+        const costoPeriodo = Number(body.CostoPeriodo ?? body.costoPeriodo ?? 0);
+
+        if (!nombrePeriodo) {
+            throw new Error('NombrePeriodo es obligatorio.');
+        }
+
+        if (!tipoPeriodo) {
+            throw new Error('TipoPeriodo es obligatorio.');
+        }
+
+        if (Number.isNaN(anio) || anio <= 0) {
+            throw new Error('Anio debe ser numérico válido.');
+        }
+
+        if (!fechaInicio || !fechaFin) {
+            throw new Error('FechaInicio y FechaFin son obligatorias.');
+        }
+
+        if (Number.isNaN(costoPeriodo) || costoPeriodo < 0) {
+            throw new Error('CostoPeriodo debe ser numérico válido.');
+        }
+
+        return {
+            NombrePeriodo: nombrePeriodo,
+            TipoPeriodo: tipoPeriodo,
+            Anio: anio,
+            FechaInicio: fechaInicio,
+            FechaFin: fechaFin,
+            FechaInicioMatricula: fechaInicioMatricula || null,
+            FechaFinMatricula: fechaFinMatricula || null,
+            EstadoPeriodo: estadoPeriodo,
+            CostoPeriodo: costoPeriodo
+        };
+    },
+
+    normalizarPayloadUsuario(body = {}) {
+        const tipoUsuario = String(body.TipoUsuario ?? body.tipoUsuario ?? '').trim().toLowerCase();
+        const username = String(body.Username ?? body.username ?? '').trim();
+        const identificacion = String(body.Identificacion ?? body.identificacion ?? '').trim();
+        const nombre = String(body.Nombre ?? body.nombre ?? '').trim();
+        const apellido1 = String(body.Apellido1 ?? body.apellido1 ?? '').trim();
+        const apellido2 = String(body.Apellido2 ?? body.apellido2 ?? '').trim();
+        const correoInstitucional = String(body.CorreoInstitucional ?? body.correoInstitucional ?? '').trim();
+        const telefono = String(body.Telefono ?? body.telefono ?? '').trim();
+        const password = String(body.password ?? body.Password ?? body.PasswordHash ?? '').trim();
+        const estadoUsuario = String(body.EstadoUsuario ?? body.estadoUsuario ?? 'Activo').trim();
+
+        if (!['docente', 'estudiante'].includes(tipoUsuario)) {
+            throw new Error('TipoUsuario debe ser "docente" o "estudiante".');
+        }
+
+        if (!username) {
+            throw new Error('Username es obligatorio.');
+        }
+
+        if (!identificacion) {
+            throw new Error('Identificacion es obligatoria.');
+        }
+
+        if (!nombre) {
+            throw new Error('Nombre es obligatorio.');
+        }
+
+        if (!apellido1) {
+            throw new Error('Apellido1 es obligatorio.');
+        }
+
+        if (!correoInstitucional) {
+            throw new Error('CorreoInstitucional es obligatorio.');
+        }
+
+        if (!password) {
+            throw new Error('La contraseña es obligatoria.');
+        }
+
+        const payload = {
+            TipoUsuario: tipoUsuario,
+            Username: username,
+            Identificacion: identificacion,
+            Nombre: nombre,
+            Apellido1: apellido1,
+            Apellido2: apellido2,
+            CorreoInstitucional: correoInstitucional,
+            Telefono: telefono,
+            password,
+            EstadoUsuario: estadoUsuario
+        };
+
+        if (tipoUsuario === 'estudiante') {
+            payload.Carnet = String(body.Carnet ?? body.carnet ?? '').trim();
+            payload.ProgramaAcademicoID = Number(body.ProgramaAcademicoID ?? body.programaAcademicoId ?? 0);
+            payload.PlanEstudioID = Number(body.PlanEstudioID ?? body.planEstudioId ?? 0);
+            payload.FechaIngreso = String(body.FechaIngreso ?? body.fechaIngreso ?? '').trim();
+            payload.EstadoAcademico = String(body.EstadoAcademico ?? body.estadoAcademico ?? 'Activo').trim();
+
+            if (!payload.Carnet) {
+                throw new Error('Carnet es obligatorio para estudiante.');
+            }
+
+            if (Number.isNaN(payload.ProgramaAcademicoID) || payload.ProgramaAcademicoID <= 0) {
+                throw new Error('ProgramaAcademicoID es obligatorio para estudiante.');
+            }
+
+            if (Number.isNaN(payload.PlanEstudioID) || payload.PlanEstudioID <= 0) {
+                throw new Error('PlanEstudioID es obligatorio para estudiante.');
+            }
+
+            if (!payload.FechaIngreso) {
+                throw new Error('FechaIngreso es obligatoria para estudiante.');
+            }
+        }
+
+        if (tipoUsuario === 'docente') {
+            payload.Especialidad = String(body.Especialidad ?? body.especialidad ?? '').trim();
+            payload.FechaContratacion = String(body.FechaContratacion ?? body.fechaContratacion ?? '').trim();
+            payload.EstadoDocente = String(body.EstadoDocente ?? body.estadoDocente ?? 'Activo').trim();
+
+            if (!payload.FechaContratacion) {
+                throw new Error('FechaContratacion es obligatoria para docente.');
+            }
+        }
+
+        return payload;
+    },
+
     /* =========================
        AUTH
     ========================= */
@@ -179,6 +313,13 @@ window.ApiService = {
         return await this.request(`/usuarios/${this.requireId('id', id)}`);
     },
 
+    async crearUsuario(body) {
+        return await this.request('/usuarios', {
+            method: 'POST',
+            body: this.normalizarPayloadUsuario(body)
+        });
+    },
+
     async obtenerProgramas() {
         return await this.request('/programas');
     },
@@ -205,6 +346,24 @@ window.ApiService = {
 
     async obtenerPeriodos() {
         return await this.request('/periodos');
+    },
+
+    async obtenerPeriodoPorId(id) {
+        return await this.request(`/periodos/${this.requireId('id', id)}`);
+    },
+
+    async crearPeriodo(body) {
+        return await this.request('/periodos', {
+            method: 'POST',
+            body: this.normalizarPayloadPeriodo(body)
+        });
+    },
+
+    async abrirMatriculaPeriodo(id, body) {
+        return await this.request(`/periodos/${this.requireId('id', id)}/abrir-matricula`, {
+            method: 'PUT',
+            body
+        });
     },
 
     async obtenerSecciones() {
